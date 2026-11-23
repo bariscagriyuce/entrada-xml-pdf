@@ -4,7 +4,7 @@ Aplicação web para importar as notas fiscais de entrada (NF-e modelo 55 / NFC-
 ou **DANFE em PDF**, armazenar todos os dados e pesquisar por **fornecedor**, **produto** e **itens**.
 
 - Interface em português, protegida por login (usuário e senha).
-- Node.js **18.17 ou superior** (recomendado: 22).
+- Node.js **24** (recomendado; também funciona no 20 e 22).
 - Não precisa de servidor de banco de dados: tudo fica em um arquivo SQLite (`dados/notas.db`).
 - Nenhuma dependência exige compilação — `npm install` funciona em hospedagem compartilhada.
 
@@ -31,7 +31,7 @@ ou **DANFE em PDF**, armazenar todos os dados e pesquisar por **fornecedor**, **
    e conecte o GitHub ou o GitLab. Selecione o repositório **entrada-xml-pdf** e o branch **main**.
 2. Em **Revisar configurações de compilação**:
    - Configuração predefinida: **Express**
-   - Versão do Node: **22.x**
+   - Versão do Node: **24.x**
    - Diretório raiz: `./`
    - Comando de build: `npm run build`
    - Arquivo de entrada: **`server.cjs`** (ou comando de início `npm start`)
@@ -48,7 +48,7 @@ A cada novo commit no branch `main`, a Hostinger pode implantar a atualização 
    - Clone URL: `https://github.com/bariscagriyuce/entrada-xml-pdf.git`
    - Repository Path: por exemplo `arquivo-nfe` (**não** use `public_html`)
 2. cPanel → **Setup Node.js App** → **Create Application**:
-   - Node.js version: 20 ou 22
+   - Node.js version: 24 (ou 20/22)
    - Application mode: Production
    - Application root: `arquivo-nfe`
    - Application URL: seu domínio ou subdomínio
