@@ -1,68 +1,82 @@
-# Arquivo NF-e — Notas de Entrada (Node.js)
+# Arquivo NF-e — Notas de Entrada
 
-Brezilya NF-e (model 55) / NFC-e (65) alış faturalarını **XML** veya **DANFE PDF** olarak içe aktarıp
-faturayı kesen şirkete (fornecedor), ürüne ve kalemlere göre saklayan, arayan ve listeleyen web uygulaması.
-Arayüz Portekizce, kullanıcı adı/şifre ile giriş korumalıdır.
+Aplicação web para importar as notas fiscais de entrada (NF-e modelo 55 / NFC-e modelo 65) em **XML**
+ou **DANFE em PDF**, armazenar todos os dados e pesquisar por **fornecedor**, **produto** e **itens**.
 
-- Node.js **18.17 veya üstü** (önerilen: 20 ya da 22)
-- Ek veritabanı sunucusu gerekmez: veriler tek bir SQLite dosyasında (`dados/notas.db`) tutulur.
-- Derleme gerektiren paket yoktur; paylaşımlı hostingde `npm install` sorunsuz çalışır.
+- Interface em português, protegida por login (usuário e senha).
+- Node.js **18.17 ou superior** (recomendado: 22).
+- Não precisa de servidor de banco de dados: tudo fica em um arquivo SQLite (`dados/notas.db`).
+- Nenhuma dependência exige compilação — `npm install` funciona em hospedagem compartilhada.
 
-## Hosting'e kurulum (cPanel → "Setup Node.js App")
+## Funcionalidades
+
+- **Importar**: envio em lote de XML, PDF e ZIP (arrastar e soltar), ou copie os arquivos para
+  `dados/entrada/` (por FTP ou gerenciador de arquivos) e clique em "Importar da pasta".
+  Arquivos ou chaves de acesso repetidos são ignorados.
+- **XML = dados completos**: emitente, destinatário, todos os itens (código, EAN, NCM, CFOP, quantidade,
+  valor unitário, ICMS/IPI/PIS/COFINS), totais, transporte, duplicatas, pagamento, informações adicionais
+  e protocolo da SEFAZ. A página da nota também mostra todos os campos do XML em árvore.
+- **PDF (DANFE)**: se já existir a nota com a mesma chave, o PDF é anexado a ela. Se houver apenas o PDF,
+  a nota é criada com os dados que puderem ser lidos (marcada como "só PDF", dados aproximados) e é
+  completada automaticamente quando o XML for importado. OCR de PDFs digitalizados só funciona se o
+  servidor tiver o `tesseract` instalado (em geral não existe em hospedagem compartilhada).
+- **Notas / Itens / Produtos / Fornecedores**: busca sem distinção de acentos; filtros por fornecedor,
+  minha empresa (destinatário), período, valor, NCM e CFOP; ordenação; **exportação CSV** (abre no Excel).
+- **Produto**: histórico completo de compras, gráfico de preço unitário e outros fornecedores com o mesmo EAN.
+- **Usuários**: o primeiro acesso cria o administrador; depois é possível adicionar usuários e trocar a senha.
+
+## Implantação na Hostinger (Node.js Web App)
+
+1. hPanel → **Sites** → **Adicionar site** → **Node.js** → **Importar repositório Git**
+   e conecte o GitHub ou o GitLab. Selecione o repositório **entrada-xml-pdf** e o branch **main**.
+2. Em **Revisar configurações de compilação**:
+   - Configuração predefinida: **Express**
+   - Versão do Node: **22.x**
+   - Diretório raiz: `./`
+   - Comando de build: `npm run build`
+   - Arquivo de entrada: **`server.cjs`** (ou comando de início `npm start`)
+3. Em **Variáveis de ambiente**, adicione `NFE_DADOS` apontando para uma pasta **fora** da pasta da
+   aplicação, por exemplo `/home/u123456789/entrada-dados`. Assim os dados não são apagados a cada nova
+   implantação.
+4. Clique em implantar e abra o domínio. A primeira tela é **"Primeiro acesso"** para criar o administrador.
+
+A cada novo commit no branch `main`, a Hostinger pode implantar a atualização automaticamente.
+
+## Implantação no cPanel ("Setup Node.js App")
 
 1. cPanel → **Git Version Control** → **Create** → "Clone a Repository":
    - Clone URL: `https://github.com/bariscagriyuce/entrada-xml-pdf.git`
-   - Repository Path: örn. `arquivo-nfe` (`public_html` içine **koymayın**)
-
-   Repo özel (private) ise GitHub'da bir erişim anahtarı (token) ya da cPanel'in SSH anahtarını
-   repoya "Deploy key" olarak eklemeniz gerekir. Güncelleme için aynı ekranda **Update from Remote**,
-   ardından Node.js uygulamasında **Restart**.
+   - Repository Path: por exemplo `arquivo-nfe` (**não** use `public_html`)
 2. cPanel → **Setup Node.js App** → **Create Application**:
-   - Node.js version: 20 veya 22 (en az 18.17)
+   - Node.js version: 20 ou 22
    - Application mode: Production
    - Application root: `arquivo-nfe`
-   - Application URL: alan adınız veya bir alt alan adı (örn. `notas.siteniz.com`)
+   - Application URL: seu domínio ou subdomínio
    - Application startup file: **`server.cjs`**
-3. **Create** → ardından **Run NPM Install** → **Restart**.
-4. Adresi açın. İlk açılışta **yönetici kullanıcısını oluşturma** ekranı gelir; ondan sonra sistem
-   yalnızca giriş ile açılır. Ek kullanıcıları sağ üstteki kullanıcı adınıza tıklayıp ekleyebilirsiniz.
-5. Sitede **SSL (https)** açık olsun (cPanel → SSL/TLS Status → AutoSSL).
+3. **Run NPM Install** → **Restart**.
+4. Para atualizar: **Git Version Control** → **Update from Remote** e depois **Restart** no aplicativo Node.js.
 
-Uygulamayı alt klasöre koyarsanız (örn. `siteniz.com/notas`), aynı ekranda ortam değişkeni ekleyin:
-`BASE_PATH` = `/notas`.
+Ative o **SSL (https)** no domínio antes de usar o sistema.
 
-### İsteğe bağlı ortam değişkenleri
+### Variáveis de ambiente (opcionais)
 
-| Değişken | Anlamı |
+| Variável | Significado |
 |---|---|
-| `BASE_PATH` | Uygulama alt klasördeyse yolu (örn. `/notas`) |
-| `NFE_DADOS` | Veri klasörü (varsayılan: uygulama içindeki `dados/`) |
-| `PORT` | Port (hosting genelde kendisi verir; yerelde varsayılan 3000) |
+| `NFE_DADOS` | Pasta dos dados (padrão: `dados/` dentro da aplicação) |
+| `BASE_PATH` | Caminho, se a aplicação ficar em uma subpasta (ex.: `/notas`) |
+| `PORT` | Porta (a hospedagem normalmente define sozinha; localmente o padrão é 3000) |
 
-## Kendi bilgisayarınızda çalıştırma
+## Executar localmente
 
 ```bash
 npm install
 npm start
 ```
 
-Ardından http://localhost:3000
+Depois acesse http://localhost:3000
 
-## Neler yapar
+## Backup
 
-- **Importar**: XML, PDF ve ZIP dosyalarını sürükle-bırak ile toplu yükleme; ya da dosyaları FTP ile
-  `dados/entrada/` klasörüne atıp "Importar da pasta". Aynı dosya/aynı chave tekrar eklenmez.
-- **XML** = tam veri: emitente, destinatário, tüm kalemler (kod, EAN, NCM, CFOP, miktar, birim fiyat,
-  ICMS/IPI/PIS/COFINS), toplamlar, taşıma, duplicatas, ödeme, ek bilgiler, SEFAZ protokolü.
-  Fatura sayfasında XML'in tüm alanları ağaç olarak da görünür.
-- **PDF (DANFE)**: aynı chave'li nota varsa PDF ona eklenir. Yalnızca PDF varsa okunabilen bilgilerle
-  "só PDF" notası oluşturulur (yaklaşık veri); XML yüklenince otomatik tamamlanır.
-  Taranmış (resim) PDF'ler için OCR yalnızca sunucuda `tesseract` kuruluysa çalışır (paylaşımlı hostingde genelde yoktur).
-- **Notas / Itens / Produtos / Fornecedores**: aksan duyarsız arama; tedarikçi, kendi şirketiniz
-  (destinatário), tarih aralığı, tutar, NCM, CFOP filtreleri; sıralama; **CSV dışa aktarma** (Excel uyumlu).
-- **Produto** sayfası: ürünün tüm alış geçmişi, fiyat grafiği, aynı EAN'ı satan diğer tedarikçiler.
-
-## Yedekleme
-
-Tüm veriler `dados/` klasöründedir (`notas.db` + `arquivos/` içindeki orijinal XML/PDF'ler).
-Bu klasörü düzenli olarak indirip saklayın.
+Todos os dados ficam na pasta de dados (`dados/` ou a definida em `NFE_DADOS`): o banco `notas.db`
+e os XML/PDF originais em `arquivos/`. Faça download dessa pasta periodicamente.
+A pasta de dados **nunca** é enviada ao repositório Git (está no `.gitignore`).
