@@ -5,7 +5,8 @@
   "type": "module",
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node server.cjs",
+    "build": "echo \"Sem etapa de build\""
   },
   "engines": {
     "node": ">=18.17"
