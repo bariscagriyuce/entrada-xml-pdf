@@ -46,7 +46,7 @@ rotas.use((req, res, next) => {
   res.locals.q = Object.fromEntries(Object.entries(q).map(([k, v]) => [k, Array.isArray(v) ? String(v[0]) : String(v)]));
   res.locals.ep = req.path;
   res.locals.ok = res.locals.q.ok || null;
-  res.locals.aviso = null;
+  res.locals.aviso = db.AVISO_DADOS;
   res.locals.urlCom = (mud) => {
     const args = { ...res.locals.q, ...mud };
     const qs = new URLSearchParams(Object.entries(args).filter(([, v]) => v !== null && v !== undefined && v !== ''));
@@ -419,8 +419,15 @@ app.use((err, req, res, next) => {
   res.status(err instanceof multer.MulterError ? 413 : 500).render('erro', { msg, usuario: res.locals.usuario || null });
 });
 
-const PORTA = Number(process.env.PORT || process.env.NFE_PORTA || 3000);
+// A hospedagem pode informar um número de porta ou o caminho de um socket em PORT.
+const portaEnv = process.env.PORT || process.env.NFE_PORTA || '3000';
+const PORTA = /^\d+$/.test(portaEnv) ? Number(portaEnv) : portaEnv;
 const HOST = process.env.NFE_HOST || undefined;
-app.listen(PORTA, HOST, () => {
-  console.log(`Arquivo de Notas de Entrada → http://${HOST || 'localhost'}:${PORTA}${BASE}`);
+const servidor = typeof PORTA === 'number' && HOST ? app.listen(PORTA, HOST) : app.listen(PORTA);
+servidor.on('listening', () => {
+  console.log(`[arquivo-nfe] Node ${process.version} — ouvindo em ${HOST ? `${HOST}:` : ''}${PORTA}${BASE} — dados em ${db.DADOS}`);
+});
+servidor.on('error', (err) => {
+  console.error(`[arquivo-nfe] Falha ao abrir a porta ${PORTA}:`, err);
+  process.exit(1);
 });
