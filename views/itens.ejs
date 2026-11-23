@@ -1,0 +1,24 @@
+<%- include('partials/topo', { titulo: 'Itens' }) %>
+<h1>Itens das notas</h1>
+<p class="sub">Busca linha a linha em todos os itens de todas as notas.</p>
+<%- include('partials/filtros', { placeholder: 'Descrição, código ou EAN do produto…', porItem: true }) %>
+<div class="card">
+  <p>Total filtrado: <b><%= moeda(soma) %></b></p>
+  <div class="tw"><table class="small">
+    <thead><tr><%- ord('data', 'Emissão') %><th>Nota</th><th>Fornecedor</th><th>Código</th><%- ord('nome', 'Descrição') %><th>NCM</th><th>CFOP</th><th>Un</th>
+      <th class="n">Qtd</th><%- ord('preco', 'Vl. unit.', 'n') %><%- ord('valor', 'Vl. total', 'n') %><th class="n">ICMS</th><th class="n">IPI</th></tr></thead>
+    <tbody>
+    <% for (const i of rows) { %>
+    <tr><td><%= data(i.data_emissao) %></td><td><a href="<%= u('/notas/' + i.nid) %>"><%= i.numero %>/<%= i.serie %></a></td>
+      <td><% if (i.emit_cnpj) { %><a href="<%= u('/fornecedores/' + i.emit_cnpj) %>"><%= i.emit_nome || doc(i.emit_cnpj) %></a><% } %></td>
+      <td class="mono"><%= i.cprod %></td><td><a href="<%= purl(i.emit_cnpj, i.cprod) %>"><%= i.xprod %></a></td>
+      <td class="mono"><%= i.ncm || '' %></td><td class="mono"><%= i.cfop || '' %></td><td><%= i.ucom || '' %></td>
+      <td class="n"><%= qtd(i.qcom) %></td><td class="n"><%= brl(i.vuncom, 4) %></td><td class="n"><b><%= brl(i.vprod) %></b></td>
+      <td class="n"><%= opc(i.icms_vicms) %></td><td class="n"><%= opc(i.ipi_vipi) %></td></tr>
+    <% } %>
+    <% if (!rows.length) { %><tr><td colspan="13" class="muted">Nenhum item encontrado.</td></tr><% } %>
+    </tbody>
+  </table></div>
+  <%- include('partials/paginacao') %>
+</div>
+<%- include('partials/rodape') %>

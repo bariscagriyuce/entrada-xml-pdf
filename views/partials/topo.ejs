@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title><%= locals.titulo ? titulo + ' · ' : '' %>Arquivo NF-e</title>
+<link rel="stylesheet" href="<%= u('/style.css') %>">
+</head>
+<body>
+<header class="top"><div class="in">
+  <a class="logo" href="<%= u('/') %>">Arquivo <span>NF-e</span></a>
+  <% if (locals.usuario) { const ep = locals.ep || ''; const on = (...ps) => ps.some(p => p === '/' ? ep === '/' : ep.startsWith(p)) ? 'on' : ''; %>
+  <nav>
+    <a href="<%= u('/') %>" class="<%= on('/') %>">Painel</a>
+    <a href="<%= u('/notas') %>" class="<%= on('/notas') %>">Notas</a>
+    <a href="<%= u('/fornecedores') %>" class="<%= on('/fornecedores') %>">Fornecedores</a>
+    <a href="<%= u('/produtos') %>" class="<%= on('/produto') %>">Produtos</a>
+    <a href="<%= u('/itens') %>" class="<%= on('/itens') %>">Itens</a>
+    <a href="<%= u('/importar') %>" class="cta <%= on('/importar') %>">+ Importar</a>
+  </nav>
+  <div class="usuario">
+    <a href="<%= u('/usuarios') %>"><%= usuario.usuario %></a>
+    <form method="post" action="<%= u('/sair') %>"><button class="sec">Sair</button></form>
+  </div>
+  <% } %>
+</div></header>
+<main>
+<% if (locals.ok) { %><div class="flash ok"><%= ok %></div><% } %>
+<% if (locals.aviso) { %><div class="aviso"><%= aviso %></div><% } %>

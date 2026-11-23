@@ -1,0 +1,19 @@
+<%- include('partials/topo', { titulo: 'Fornecedores' }) %>
+<h1>Fornecedores</h1>
+<form class="filtros card" method="get">
+  <label>Busca<input type="search" name="q" value="<%= q.q || '' %>" placeholder="Nome, CNPJ ou cidade" autofocus></label>
+  <button>Buscar</button><a class="btn sec" href="<%= u('/fornecedores') %>">Limpar</a>
+</form>
+<div class="card tw"><table>
+  <thead><tr><%- ord('nome', 'Fornecedor') %><th>CNPJ</th><th>Cidade/UF</th><%- ord('qtd', 'Notas', 'n') %><%- ord('total', 'Valor comprado', 'n') %><th>Primeira</th><%- ord('ultima', 'Última') %></tr></thead>
+  <tbody>
+  <% for (const e of rows) { %>
+  <tr><td><a href="<%= u('/fornecedores/' + e.cnpj) %>"><b><%= e.nome || e.cnpj %></b></a><% if (e.fantasia) { %><div class="muted small"><%= e.fantasia %></div><% } %></td>
+      <td class="mono"><%= doc(e.cnpj) %></td><td><%= e.municipio || '' %><%= e.uf ? '/' + e.uf : '' %></td>
+      <td class="n"><%= e.qtd %></td><td class="n"><b><%= moeda(e.total) %></b></td>
+      <td><%= data(e.primeira) %></td><td><%= data(e.ultima) %></td></tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="7" class="muted">Nenhum fornecedor encontrado.</td></tr><% } %>
+  </tbody>
+</table><p class="muted small"><%= rows.length %> fornecedor(es)</p></div>
+<%- include('partials/rodape') %>

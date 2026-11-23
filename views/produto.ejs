@@ -1,0 +1,41 @@
+<%- include('partials/topo', { titulo: xprod }) %>
+<% const ult = hist[hist.length - 1]; %>
+<h1><%= xprod %></h1>
+<p class="sub">Código <span class="mono"><%= cprod %></span><% if (ean) { %> · EAN <span class="mono"><%= ean %></span><% } %> · fornecedor
+  <% if (e) { %><a href="<%= u('/fornecedores/' + e.cnpj) %>"><%= e.nome %></a><% } %></p>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">Compras</div><div class="v"><%= hist.length %></div></div>
+  <div class="card kpi"><div class="l">Quantidade total</div><div class="v"><%= qtd(locals.qtdTotal) %> <%= ult.ucom || '' %></div></div>
+  <div class="card kpi"><div class="l">Valor total</div><div class="v"><%= moeda(total) %></div></div>
+  <div class="card kpi"><div class="l">Último preço</div><div class="v"><%= moeda(ult.vuncom) %></div></div>
+</div>
+<% if (precos.length > 1) {
+  const mn = Math.min(...precos), mx = Math.max(...precos), rg = (mx - mn) || 1, W = 1000, H = 180, k = precos.length;
+  const pts = precos.map((p, i) => [40 + i * (W - 60) / (k - 1), H - 20 - (p - mn) / rg * (H - 40)]); %>
+<div class="card"><h2>Evolução do preço unitário</h2>
+  <svg class="chart" viewBox="0 0 <%= W %> <%= H %>" preserveAspectRatio="none">
+    <line x1="0" y1="20" x2="<%= W %>" y2="20"/><line x1="0" y1="<%= H - 20 %>" x2="<%= W %>" y2="<%= H - 20 %>"/>
+    <text x="4" y="14"><%= brl(mx, 4) %></text><text x="4" y="<%= H - 4 %>"><%= brl(mn, 4) %></text>
+    <polyline points="<%= pts.map(p => p.join(',')).join(' ') %>"/>
+    <% pts.forEach((p, i) => { %><circle r="3" cx="<%= p[0] %>" cy="<%= p[1] %>"><title><%= brl(precos[i], 4) %></title></circle><% }) %>
+  </svg>
+</div>
+<% } %>
+<div class="card"><h2>Histórico de compras</h2><div class="tw"><table>
+  <tr><th>Emissão</th><th>Nota</th><th>Destinatário</th><th>Descrição na nota</th><th>Un</th><th class="n">Qtd</th><th class="n">Vl. unit.</th><th class="n">Desc.</th><th class="n">Vl. total</th><th>CFOP</th></tr>
+  <% for (const h of [...hist].reverse()) { %>
+  <tr><td><%= data(h.data_emissao) %></td><td><a href="<%= u('/notas/' + h.nid) %>"><%= h.numero %>/<%= h.serie %></a></td>
+    <td class="small"><%= h.dest_nome || doc(h.dest_cnpj) %></td><td class="small"><%= h.xprod %></td><td><%= h.ucom %></td>
+    <td class="n"><%= qtd(h.qcom) %></td><td class="n"><%= brl(h.vuncom, 4) %></td><td class="n"><%= h.vdesc ? brl(h.vdesc) : '' %></td>
+    <td class="n"><b><%= brl(h.vprod) %></b></td><td class="mono"><%= h.cfop %></td></tr>
+  <% } %>
+</table></div></div>
+<% if (outros.length) { %>
+<div class="card"><h2>Mesmo EAN em outros fornecedores</h2><table>
+  <tr><th>Fornecedor</th><th>Código</th><th>Descrição</th><th class="n">Compras</th><th class="n">Menor</th><th class="n">Maior</th><th>Última</th></tr>
+  <% for (const o of outros) { %><tr><td><%= o.emit_nome %></td><td class="mono"><%= o.cprod %></td>
+    <td><a href="<%= purl(o.emit_cnpj, o.cprod) %>"><%= o.xprod %></a></td>
+    <td class="n"><%= o.vezes %></td><td class="n"><%= brl(o.pmin, 4) %></td><td class="n"><%= brl(o.pmax, 4) %></td><td><%= data(o.ultima) %></td></tr><% } %>
+</table></div>
+<% } %>
+<%- include('partials/rodape') %>

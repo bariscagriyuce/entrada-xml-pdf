@@ -1,0 +1,22 @@
+{
+  "name": "arquivo-nfe",
+  "version": "2.0.0",
+  "description": "Arquivo de notas de entrada (NF-e) — importação de XML/PDF, busca e relatórios",
+  "type": "module",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "adm-zip": "0.5.16",
+    "ejs": "3.1.10",
+    "express": "4.21.2",
+    "fast-xml-parser": "4.5.3",
+    "multer": "2.0.2",
+    "pdfjs-dist": "4.10.38",
+    "sql.js": "1.12.0"
+  }
+}

@@ -1,0 +1,11 @@
+<%- include('partials/topo', { titulo: 'Entrar' }) %>
+<div class="card login">
+  <h1>Entrar</h1>
+  <% if (erro) { %><div class="erro"><%= erro %></div><% } %>
+  <form method="post">
+    <label>Usuário<input name="usuario" autocomplete="username" required autofocus></label>
+    <label>Senha<input name="senha" type="password" autocomplete="current-password" required></label>
+    <button>Entrar</button>
+  </form>
+</div>
+<%- include('partials/rodape') %>

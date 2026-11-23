@@ -1,0 +1,54 @@
+<%- include('partials/topo', { titulo: 'Painel' }) %>
+<h1>Painel</h1>
+<% if (r.qtd === 0) { %>
+<div class="card">
+  <h2>Nenhuma nota importada ainda</h2>
+  <p>Comece importando os arquivos XML (ou PDF do DANFE) das notas de entrada.</p>
+  <a class="btn" href="<%= u('/importar') %>">Importar notas</a>
+</div>
+<% } else { %>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">Notas</div><div class="v"><%= r.qtd %></div></div>
+  <div class="card kpi"><div class="l">Valor total</div><div class="v"><%= moeda(r.total) %></div></div>
+  <div class="card kpi"><div class="l">Fornecedores</div><div class="v"><%= r.forn %></div></div>
+  <div class="card kpi"><div class="l">Itens de produto</div><div class="v"><%= itens %></div></div>
+</div>
+<p class="muted small">Período: <%= data(r.primeira) %> a <%= data(r.ultima) %></p>
+<% if (pendentes) { %><div class="aviso"><%= pendentes %> nota(s) importada(s) somente pelo PDF — os dados são aproximados. <a href="<%= u('/notas?origem=pdf') %>">Ver</a> e importe o XML correspondente para completar.</div><% } %>
+<div class="grid g2">
+  <div class="card">
+    <h2>Compras por mês</h2>
+    <% const mx = Math.max(1, ...mensal.map(m => m.total || 0)); %>
+    <div class="bar">
+      <% for (const m of mensal) { %>
+      <div title="<%= m.mes %>: <%= moeda(m.total) %> (<%= m.qtd %> notas)">
+        <i style="height: <%= ((m.total || 0) / mx * 100).toFixed(1) %>%"></i>
+        <small><%= m.mes.slice(5) %>/<%= m.mes.slice(2, 4) %></small>
+      </div>
+      <% } %>
+    </div>
+  </div>
+  <div class="card">
+    <h2>Maiores fornecedores</h2>
+    <table>
+      <% for (const t of top) { %>
+      <tr><td><a href="<%= u('/fornecedores/' + t.cnpj) %>"><%= t.nome %></a></td>
+          <td class="n muted"><%= t.qtd %> notas</td><td class="n"><%= moeda(t.total) %></td></tr>
+      <% } %>
+    </table>
+  </div>
+</div>
+<div class="card">
+  <h2>Importadas recentemente</h2>
+  <table>
+    <tr><th>Nota</th><th>Emissão</th><th>Fornecedor</th><th class="n">Valor</th><th></th></tr>
+    <% for (const n of recentes) { %>
+    <tr><td><a href="<%= u('/notas/' + n.id) %>"><%= n.numero || '—' %><%= n.serie ? '/' + n.serie : '' %></a></td>
+        <td><%= data(n.data_emissao) %></td><td><%= n.emit_nome || doc(n.emit_cnpj) %></td>
+        <td class="n"><%= moeda(n.v_nf) %></td>
+        <td><% if (n.origem === 'pdf') { %><span class="tag pdf">só PDF</span><% } %></td></tr>
+    <% } %>
+  </table>
+</div>
+<% } %>
+<%- include('partials/rodape') %>

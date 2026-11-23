@@ -1,0 +1,12 @@
+# dependências (o hosting instala com npm install)
+node_modules/
+
+# dados da aplicação: banco, notas importadas e segredo da sessão — NUNCA versionar
+dados/
+
+# diversos
+.env
+*.log
+.DS_Store
+Thumbs.db
+.claude/

@@ -1,0 +1,33 @@
+<%- include('partials/topo', { titulo: 'Usuários' }) %>
+<h1>Usuários</h1>
+<% if (erro) { %><div class="erro"><%= erro %></div><% } %>
+<div class="grid g2">
+  <div class="card"><h2>Usuários com acesso</h2>
+    <table>
+      <tr><th>Usuário</th><th>Criado em</th><th></th></tr>
+      <% for (const x of lista) { %>
+      <tr><td><b><%= x.usuario %></b><%= x.id === usuario.id ? ' (você)' : '' %></td><td><%= data(x.criado_em) %></td>
+        <td><% if (x.id !== usuario.id && lista.length > 1) { %>
+          <form class="inline" method="post" action="<%= u('/usuarios/' + x.id + '/excluir') %>" onsubmit="return confirm('Excluir o usuário <%= x.usuario %>?')"><button class="perigo">Excluir</button></form>
+        <% } %></td></tr>
+      <% } %>
+    </table>
+  </div>
+  <div class="card"><h2>Novo usuário</h2>
+    <form method="post" action="<%= u('/usuarios') %>" class="filtros" style="flex-direction:column;align-items:stretch">
+      <label>Usuário<input name="usuario" required autocomplete="off"></label>
+      <label>Senha (mínimo 8 caracteres)<input name="senha" type="password" required minlength="8" autocomplete="new-password"></label>
+      <label>Repita a senha<input name="senha2" type="password" required minlength="8" autocomplete="new-password"></label>
+      <button>Criar usuário</button>
+    </form>
+  </div>
+</div>
+<div class="card" style="max-width:520px"><h2>Alterar minha senha</h2>
+  <form method="post" action="<%= u('/senha') %>" class="filtros" style="flex-direction:column;align-items:stretch">
+    <label>Senha atual<input name="atual" type="password" required autocomplete="current-password"></label>
+    <label>Nova senha<input name="senha" type="password" required minlength="8" autocomplete="new-password"></label>
+    <label>Repita a nova senha<input name="senha2" type="password" required minlength="8" autocomplete="new-password"></label>
+    <button>Alterar senha</button>
+  </form>
+</div>
+<%- include('partials/rodape') %>

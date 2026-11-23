@@ -1,0 +1,12 @@
+<div class="pag">
+  <span class="muted" style="border:0"><%= total %> registro(s)</span>
+  <% if (paginas > 1) { %>
+    <% if (pag > 1) { %><a href="<%= urlCom({ pag: pag - 1 }) %>">‹ Anterior</a><% } %>
+    <% for (let p = 1; p <= paginas; p++) { %>
+      <% if (p === pag) { %><span class="on"><%= p %></span>
+      <% } else if (p <= 2 || p > paginas - 2 || Math.abs(p - pag) <= 2) { %><a href="<%= urlCom({ pag: p }) %>"><%= p %></a>
+      <% } else if (p === 3 || p === paginas - 2) { %><span style="border:0">…</span><% } %>
+    <% } %>
+    <% if (pag < paginas) { %><a href="<%= urlCom({ pag: pag + 1 }) %>">Próxima ›</a><% } %>
+  <% } %>
+</div>

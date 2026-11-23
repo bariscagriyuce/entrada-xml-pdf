@@ -1,0 +1,22 @@
+<%- include('partials/topo', { titulo: 'Produtos' }) %>
+<h1>Produtos</h1>
+<p class="sub">Cada linha é um produto de um fornecedor (pelo código do fornecedor), somando todas as notas.</p>
+<%- include('partials/filtros', { placeholder: 'Descrição, código ou EAN do produto…', porItem: true }) %>
+<div class="card tw"><table>
+  <thead><tr><th>Fornecedor</th><th>Código</th><%- ord('nome', 'Descrição') %><th>NCM</th><th>Un</th>
+    <%- ord('vezes', 'Compras', 'n') %><%- ord('qtd', 'Qtd total', 'n') %><%- ord('total', 'Valor total', 'n') %>
+    <th class="n">Menor</th><th class="n">Maior</th><th class="n">Último preço</th><%- ord('ultima', 'Última') %></tr></thead>
+  <tbody>
+  <% for (const p of rows) { %>
+  <tr><td class="small"><% if (p.emit_cnpj) { %><a href="<%= u('/fornecedores/' + p.emit_cnpj) %>"><%= p.emit_nome || doc(p.emit_cnpj) %></a><% } %></td>
+    <td class="mono"><%= p.cprod %></td>
+    <td><a href="<%= purl(p.emit_cnpj, p.cprod) %>"><%= p.xprod %></a><% if (p.cean && p.cean !== 'SEM GTIN') { %><div class="muted mono small">EAN <%= p.cean %></div><% } %></td>
+    <td class="mono"><%= p.ncm || '' %></td><td><%= p.ucom || '' %></td>
+    <td class="n"><%= p.vezes %></td><td class="n"><%= qtd(p.qtd) %></td><td class="n"><b><%= moeda(p.total) %></b></td>
+    <td class="n"><%= brl(p.pmin, 4) %></td><td class="n"><%= brl(p.pmax, 4) %></td><td class="n"><%= brl(p.ultimo_preco, 4) %></td>
+    <td><%= data(p.ultima) %></td></tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="12" class="muted">Nenhum produto encontrado.</td></tr><% } %>
+  </tbody>
+</table><%- include('partials/paginacao') %></div>
+<%- include('partials/rodape') %>

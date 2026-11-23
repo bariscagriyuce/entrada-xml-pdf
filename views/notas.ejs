@@ -1,0 +1,32 @@
+<%- include('partials/topo', { titulo: 'Notas' }) %>
+<h1>Notas de entrada</h1>
+<%- include('partials/filtros', { placeholder: 'Fornecedor, nº da nota, chave, produto…', porItem: false }) %>
+<div class="card">
+  <div class="acoes"><span>Soma das notas filtradas: <b><%= moeda(soma) %></b></span></div>
+  <div class="tw"><table>
+    <thead><tr>
+      <%- ord('numero', 'Nº / Série') %><%- ord('data', 'Emissão') %><%- ord('fornecedor', 'Fornecedor') %>
+      <th>Destinatário</th><th>Natureza da operação</th><th class="n">Itens</th><%- ord('valor', 'Valor total', 'n') %><th>Arquivos</th>
+    </tr></thead>
+    <tbody>
+    <% for (const n of rows) { %>
+    <tr>
+      <td><a href="<%= u('/notas/' + n.id) %>"><b><%= n.numero || '—' %></b><% if (n.serie) { %><span class="muted">/<%= n.serie %></span><% } %></a></td>
+      <td><%= data(n.data_emissao) %></td>
+      <td><% if (n.emit_cnpj) { %><a href="<%= u('/fornecedores/' + n.emit_cnpj) %>"><%= n.emit_nome || doc(n.emit_cnpj) %></a><% } %>
+          <div class="muted small"><%= doc(n.emit_cnpj) %></div></td>
+      <td class="small"><%= n.dest_nome || doc(n.dest_cnpj) %></td>
+      <td class="small"><%= n.natureza_operacao || '—' %></td>
+      <td class="n"><%= n.n_itens %></td>
+      <td class="n"><b><%= moeda(n.v_nf) %></b></td>
+      <td><% if (n.arquivo_xml) { %><a class="tag" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">XML</a><% } %>
+          <% if (n.arquivo_pdf) { %><a class="tag pdf" href="<%= u('/notas/' + n.id + '/arquivo/pdf') %>" target="_blank">PDF</a><% } %>
+          <% if (n.origem === 'pdf') { %><span class="tag erro" title="Sem XML: dados aproximados">sem XML</span><% } %></td>
+    </tr>
+    <% } %>
+    <% if (!rows.length) { %><tr><td colspan="8" class="muted">Nenhuma nota encontrada.</td></tr><% } %>
+    </tbody>
+  </table></div>
+  <%- include('partials/paginacao') %>
+</div>
+<%- include('partials/rodape') %>

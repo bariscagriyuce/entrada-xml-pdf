@@ -1,0 +1,13 @@
+<%- include('partials/topo', { titulo: 'Primeiro acesso' }) %>
+<div class="card login">
+  <h1>Primeiro acesso</h1>
+  <p class="muted">Crie o usuário administrador. Depois disso, o sistema só abre com login.</p>
+  <% if (erro) { %><div class="erro"><%= erro %></div><% } %>
+  <form method="post">
+    <label>Usuário<input name="usuario" autocomplete="username" required autofocus></label>
+    <label>Senha (mínimo 8 caracteres)<input name="senha" type="password" autocomplete="new-password" required minlength="8"></label>
+    <label>Repita a senha<input name="senha2" type="password" autocomplete="new-password" required minlength="8"></label>
+    <button>Criar e entrar</button>
+  </form>
+</div>
+<%- include('partials/rodape') %>

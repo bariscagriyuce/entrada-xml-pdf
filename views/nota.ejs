@@ -1,0 +1,132 @@
+<%- include('partials/topo', { titulo: 'NF-e ' + (n.numero || '') }) %>
+<%
+const pessoa = (p, cnpj) => {
+  if (!p) return `<p class="muted">${escapar(doc(cnpj))}</p>`;
+  const L = [['Razão social', `<b>${escapar(p.nome || '—')}</b>`]];
+  if (p.fantasia) L.push(['Fantasia', escapar(p.fantasia)]);
+  L.push(['CNPJ/CPF', `<span class="mono">${escapar(doc(p.cnpj))}</span>`]);
+  if (p.ie) L.push(['IE', `<span class="mono">${escapar(p.ie)}</span>`]);
+  if (p.logradouro) L.push(['Endereço', escapar(`${p.logradouro}, ${p.numero || ''}${p.complemento ? ' — ' + p.complemento : ''}`) + '<br>' + escapar(`${p.bairro || ''} · ${p.municipio || ''}/${p.uf || ''} · CEP ${p.cep || ''}`)]);
+  if (p.fone) L.push(['Telefone', escapar(p.fone)]);
+  if (p.email) L.push(['E-mail', escapar(p.email)]);
+  return '<dl class="kv">' + L.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('') + '</dl>';
+};
+const mapa = (m, v) => m[v] || v || '—';
+%>
+<div class="acoes">
+  <h1 style="margin:0">NF-e nº <%= n.numero || '—' %><%= n.serie ? ' · série ' + n.serie : '' %></h1>
+  <% if (n.origem === 'pdf') { %><span class="tag pdf">importada do PDF</span><% } %>
+  <span class="right"></span>
+  <% if (n.arquivo_xml) { %><a class="btn sec" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">Baixar XML</a><% } %>
+  <% if (n.arquivo_pdf) { %><a class="btn sec" target="_blank" href="<%= u('/notas/' + n.id + '/arquivo/pdf') %>">Abrir PDF (DANFE)</a><% } %>
+  <form method="post" action="<%= u('/notas/' + n.id + '/excluir') %>" onsubmit="return confirm('Excluir esta nota e seus arquivos?')"><button class="perigo">Excluir</button></form>
+</div>
+<p class="muted mono" style="margin-top:6px">Chave: <%= chave(n.chave) %></p>
+<% if (n.observacao) { %><div class="aviso"><%= n.observacao %></div><% } %>
+<% if (n.status_codigo && !['100', '150'].includes(n.status_codigo)) { %><div class="aviso">Situação na SEFAZ: <%= n.status_codigo %> — <%= n.status_motivo %></div><% } %>
+
+<div class="grid g2">
+  <div class="card"><h2>Emitente (fornecedor)</h2><%- pessoa(emit, n.emit_cnpj) %>
+    <% if (n.emit_cnpj) { %><p><a href="<%= u('/fornecedores/' + n.emit_cnpj) %>">Ver todas as notas deste fornecedor →</a></p><% } %></div>
+  <div class="card"><h2>Destinatário</h2><%- pessoa(dest, n.dest_cnpj) %></div>
+</div>
+
+<div class="grid g2">
+  <div class="card"><h2>Dados da nota</h2>
+    <dl class="kv">
+      <dt>Natureza da operação</dt><dd><%= n.natureza_operacao || '—' %></dd>
+      <dt>Modelo</dt><dd><%= n.modelo || '—' %><%= n.modelo === '55' ? ' (NF-e)' : n.modelo === '65' ? ' (NFC-e)' : '' %></dd>
+      <dt>Emissão</dt><dd><%= data(n.dh_emissao) %></dd>
+      <dt>Saída/entrada</dt><dd><%= data(n.dh_saida_entrada) %></dd>
+      <dt>Tipo</dt><dd><%= mapa({ 0: 'Entrada', 1: 'Saída' }, n.tipo_nf) %></dd>
+      <dt>Finalidade</dt><dd><%= mapa({ 1: 'Normal', 2: 'Complementar', 3: 'Ajuste', 4: 'Devolução' }, n.finalidade) %></dd>
+      <dt>Ambiente</dt><dd><%= mapa({ 1: 'Produção', 2: 'Homologação' }, n.ambiente) %></dd>
+      <dt>Protocolo</dt><dd class="mono"><%= n.protocolo || '—' %> <% if (n.dh_autorizacao) { %><span class="muted">(<%= data(n.dh_autorizacao) %>)</span><% } %></dd>
+      <dt>Situação</dt><dd><%= n.status_codigo || '—' %> <%= n.status_motivo || '' %></dd>
+      <dt>Importada em</dt><dd><%= data(n.importado_em) %></dd>
+    </dl>
+  </div>
+  <div class="card"><h2>Totais</h2>
+    <dl class="kv">
+      <dt>Base de cálculo ICMS</dt><dd><%= moeda(n.v_bc) %></dd>
+      <dt>ICMS</dt><dd><%= moeda(n.v_icms) %></dd>
+      <dt>Base ICMS ST</dt><dd><%= moeda(n.v_bcst) %></dd>
+      <dt>ICMS ST</dt><dd><%= moeda(n.v_st) %></dd>
+      <dt>Valor dos produtos</dt><dd><%= moeda(n.v_prod) %></dd>
+      <dt>Frete</dt><dd><%= moeda(n.v_frete) %></dd>
+      <dt>Seguro</dt><dd><%= moeda(n.v_seg) %></dd>
+      <dt>Desconto</dt><dd><%= moeda(n.v_desc) %></dd>
+      <dt>Outras despesas</dt><dd><%= moeda(n.v_outro) %></dd>
+      <dt>IPI</dt><dd><%= moeda(n.v_ipi) %></dd>
+      <dt>PIS / COFINS</dt><dd><%= moeda(n.v_pis) %> / <%= moeda(n.v_cofins) %></dd>
+      <dt>Tributos aprox.</dt><dd><%= moeda(n.v_tot_trib) %></dd>
+      <dt><b>Valor total da nota</b></dt><dd><b style="font-size:18px"><%= moeda(n.v_nf) %></b></dd>
+    </dl>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Itens (<%= itens.length %>)</h2>
+  <div class="tw"><table class="small">
+    <thead><tr><th>#</th><th>Código</th><th>Descrição</th><th>NCM</th><th>CFOP</th><th>Un</th>
+      <th class="n">Qtd</th><th class="n">Vl. unit.</th><th class="n">Desc.</th><th class="n">Vl. total</th>
+      <th>CST</th><th class="n">BC ICMS</th><th class="n">% ICMS</th><th class="n">ICMS</th><th class="n">ICMS ST</th>
+      <th class="n">% IPI</th><th class="n">IPI</th><th class="n">PIS</th><th class="n">COFINS</th></tr></thead>
+    <tbody>
+    <% for (const i of itens) { %>
+    <tr>
+      <td class="muted"><%= i.n_item %></td>
+      <td class="mono"><a href="<%= purl(n.emit_cnpj, i.cprod) %>"><%= i.cprod %></a></td>
+      <td><%= i.xprod %>
+        <% if (i.cean && i.cean !== 'SEM GTIN') { %><div class="muted mono">EAN <%= i.cean %></div><% } %>
+        <% if (i.xped) { %><div class="muted">Pedido <%= i.xped %><%= i.nitemped ? '/' + i.nitemped : '' %></div><% } %>
+        <% if (i.inf_ad_prod) { %><div class="muted"><%= i.inf_ad_prod %></div><% } %></td>
+      <td class="mono"><%= i.ncm || '' %><% if (i.cest) { %><div class="muted">CEST <%= i.cest %></div><% } %></td>
+      <td class="mono"><%= i.cfop || '' %></td><td><%= i.ucom || '' %></td>
+      <td class="n"><%= qtd(i.qcom) %></td><td class="n"><%= brl(i.vuncom, 4) %></td>
+      <td class="n"><%= i.vdesc ? brl(i.vdesc) : '' %></td><td class="n"><b><%= brl(i.vprod) %></b></td>
+      <td class="mono"><%= (i.icms_orig || '') + (i.icms_cst || '') %></td>
+      <td class="n"><%= opc(i.icms_vbc) %></td><td class="n"><%= opc(i.icms_picms) %></td><td class="n"><%= opc(i.icms_vicms) %></td>
+      <td class="n"><%= i.icms_vicmsst ? brl(i.icms_vicmsst) : '' %></td>
+      <td class="n"><%= opc(i.ipi_pipi) %></td><td class="n"><%= opc(i.ipi_vipi) %></td>
+      <td class="n"><%= opc(i.pis_vpis) %></td><td class="n"><%= opc(i.cofins_vcofins) %></td>
+    </tr>
+    <% } %>
+    <% if (!itens.length) { %><tr><td colspan="19" class="muted">Nenhum item reconhecido.</td></tr><% } %>
+    </tbody>
+  </table></div>
+</div>
+
+<div class="grid g2">
+  <div class="card"><h2>Cobrança e pagamento</h2>
+    <% if (n.fatura_numero) { %><p>Fatura <%= n.fatura_numero %> — líquido <%= moeda(n.fatura_v_liq) %></p><% } %>
+    <% if (dups.length) { %><table><tr><th>Duplicata</th><th>Vencimento</th><th class="n">Valor</th></tr>
+      <% for (const d of dups) { %><tr><td><%= d.n_dup %></td><td><%= data(d.vencimento) %></td><td class="n"><%= moeda(d.valor) %></td></tr><% } %></table><% } %>
+    <% if (pags.length) { %><table style="margin-top:10px"><tr><th>Forma de pagamento</th><th class="n">Valor</th></tr>
+      <% for (const p of pags) { %><tr><td><%= p.descricao %></td><td class="n"><%= moeda(p.valor) %></td></tr><% } %></table><% } %>
+    <% if (!dups.length && !pags.length && !n.fatura_numero) { %><p class="muted">Sem informações.</p><% } %>
+  </div>
+  <div class="card"><h2>Transporte</h2>
+    <dl class="kv">
+      <dt>Modalidade do frete</dt><dd><%= mapa(MOD_FRETE, n.mod_frete) %></dd>
+      <dt>Transportadora</dt><dd><%= n.transp_nome || '—' %> <% if (n.transp_cnpj) { %><span class="muted mono"><%= doc(n.transp_cnpj) %></span><% } %></dd>
+      <dt>Volumes</dt><dd><%= qtd(n.vol_qtd) %> <%= n.vol_especie || '' %></dd>
+      <dt>Peso líq. / bruto</dt><dd><%= qtd(n.peso_liquido) %> / <%= qtd(n.peso_bruto) %> kg</dd>
+    </dl>
+  </div>
+</div>
+
+<% if (n.inf_complementar || n.inf_fisco) { %>
+<div class="card"><h2>Informações adicionais</h2>
+  <% if (n.inf_complementar) { %><p style="white-space:pre-wrap"><%= n.inf_complementar %></p><% } %>
+  <% if (n.inf_fisco) { %><p class="muted" style="white-space:pre-wrap">Fisco: <%= n.inf_fisco %></p><% } %>
+</div>
+<% } %>
+
+<% if (arvore) { %>
+<div class="card"><details class="xml"><summary><b>Todos os campos do XML</b> <span class="muted">(estrutura completa da NF-e, sem a assinatura)</span></summary>
+  <div class="tree" style="margin-top:10px"><ul><%- arvoreHtml(arvore) %></ul></div></details></div>
+<% } else if (n.texto_pdf) { %>
+<div class="card"><details class="xml"><summary><b>Texto extraído do PDF</b></summary><pre class="txt"><%= n.texto_pdf %></pre></details></div>
+<% } %>
+<%- include('partials/rodape') %>

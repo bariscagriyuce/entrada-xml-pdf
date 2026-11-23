@@ -1,0 +1,25 @@
+<form class="filtros card" method="get">
+  <label>Busca<input type="search" name="q" value="<%= q.q || '' %>" placeholder="<%= placeholder %>" autofocus></label>
+  <label>Fornecedor (emitente)
+    <select name="emit"><option value="">Todos</option>
+      <% for (const f of fornecedores) { %><option value="<%= f.cnpj %>" <%= q.emit === f.cnpj ? 'selected' : '' %>><%= f.nome || f.cnpj %></option><% } %>
+    </select></label>
+  <% if (minhasEmpresas.length > 1) { %>
+  <label>Minha empresa (destinatário)
+    <select name="dest"><option value="">Todas</option>
+      <% for (const f of minhasEmpresas) { %><option value="<%= f.cnpj %>" <%= q.dest === f.cnpj ? 'selected' : '' %>><%= f.nome %></option><% } %>
+    </select></label>
+  <% } %>
+  <label>De<input type="date" name="de" value="<%= q.de || '' %>"></label>
+  <label>Até<input type="date" name="ate" value="<%= q.ate || '' %>"></label>
+  <% if (locals.porItem) { %>
+  <label>NCM<input name="ncm" value="<%= q.ncm || '' %>" size="9"></label>
+  <label>CFOP<input name="cfop" value="<%= q.cfop || '' %>" size="5"></label>
+  <% } %>
+  <label>Valor mín.<input name="vmin" value="<%= q.vmin || '' %>" size="8"></label>
+  <label>Valor máx.<input name="vmax" value="<%= q.vmax || '' %>" size="8"></label>
+  <% if (q.ordem) { %><input type="hidden" name="ordem" value="<%= q.ordem %>"><% } %>
+  <button>Filtrar</button>
+  <a class="btn sec" href="<%= urlCom({ q: null, emit: null, dest: null, de: null, ate: null, ncm: null, cfop: null, vmin: null, vmax: null, ordem: null, pag: null, origem: null }) %>">Limpar</a>
+  <a class="btn sec right" href="<%= urlCom({ formato: 'csv', pag: null }) %>">Exportar CSV</a>
+</form>

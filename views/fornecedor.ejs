@@ -1,0 +1,35 @@
+<%- include('partials/topo', { titulo: e.nome }) %>
+<h1><%= e.nome || doc(e.cnpj) %></h1>
+<p class="sub mono"><%= doc(e.cnpj) %><%= e.fantasia ? ' · ' + e.fantasia : '' %></p>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">Notas</div><div class="v"><%= r.qtd %></div></div>
+  <div class="card kpi"><div class="l">Valor comprado</div><div class="v"><%= moeda(r.total) %></div></div>
+  <div class="card kpi"><div class="l">Primeira compra</div><div class="v"><%= data(r.primeira) %></div></div>
+  <div class="card kpi"><div class="l">Última compra</div><div class="v"><%= data(r.ultima) %></div></div>
+</div>
+<div class="card"><h2>Cadastro</h2>
+  <dl class="kv">
+    <dt>IE</dt><dd class="mono"><%= e.ie || '—' %></dd>
+    <dt>Endereço</dt><dd><% if (e.logradouro) { %><%= e.logradouro %>, <%= e.numero %> <%= e.complemento || '' %> — <%= e.bairro %> · <%= e.municipio %>/<%= e.uf %> · CEP <%= e.cep %><% } else { %>—<% } %></dd>
+    <dt>Telefone</dt><dd><%= e.fone || '—' %></dd>
+    <dt>E-mail</dt><dd><%= e.email || '—' %></dd>
+  </dl>
+  <p class="acoes"><a class="btn sec" href="<%= u('/notas?emit=' + e.cnpj) %>">Filtrar notas</a>
+    <a class="btn sec" href="<%= u('/itens?emit=' + e.cnpj) %>">Filtrar itens</a></p>
+</div>
+<div class="card"><h2>Produtos comprados (<%= produtos.length %>)</h2><div class="tw"><table>
+  <tr><th>Código</th><th>Descrição</th><th>Un</th><th class="n">Compras</th><th class="n">Qtd total</th><th class="n">Valor total</th><th class="n">Menor preço</th><th class="n">Maior preço</th><th>Última</th></tr>
+  <% for (const p of produtos) { %>
+  <tr><td class="mono"><%= p.cprod %></td><td><a href="<%= purl(e.cnpj, p.cprod) %>"><%= p.xprod %></a></td><td><%= p.ucom %></td>
+    <td class="n"><%= p.vezes %></td><td class="n"><%= qtd(p.qtd) %></td><td class="n"><%= moeda(p.total) %></td>
+    <td class="n"><%= brl(p.pmin, 4) %></td><td class="n"><%= brl(p.pmax, 4) %></td><td><%= data(p.ultima) %></td></tr>
+  <% } %>
+</table></div></div>
+<div class="card"><h2>Notas (<%= notas.length %>)</h2><div class="tw"><table>
+  <tr><th>Nº / Série</th><th>Emissão</th><th>Natureza</th><th class="n">Itens</th><th class="n">Valor</th></tr>
+  <% for (const n of notas) { %>
+  <tr><td><a href="<%= u('/notas/' + n.id) %>"><b><%= n.numero %></b>/<%= n.serie %></a> <% if (n.origem === 'pdf') { %><span class="tag pdf">só PDF</span><% } %></td>
+    <td><%= data(n.data_emissao) %></td><td class="small"><%= n.natureza_operacao || '' %></td><td class="n"><%= n.n_itens %></td><td class="n"><%= moeda(n.v_nf) %></td></tr>
+  <% } %>
+</table></div></div>
+<%- include('partials/rodape') %>

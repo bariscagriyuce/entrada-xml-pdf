@@ -1,0 +1,48 @@
+<%- include('partials/topo', { titulo: 'Importar' }) %>
+<h1>Importar notas</h1>
+<% if (resultados) {
+  const c = (s) => resultados.filter(r => r.status === s).length;
+  const rot = { ok: 'importado', ignorado: 'já existe', erro: 'erro' }; %>
+<div class="card"><h2>Resultado da importação</h2>
+  <p><span class="tag"><%= c('ok') %> importado(s)</span> <span class="tag ignorado"><%= c('ignorado') %> já existente(s)</span> <span class="tag erro"><%= c('erro') %> com erro</span></p>
+  <div class="tw"><table class="small">
+    <tr><th>Arquivo</th><th>Situação</th><th>Detalhe</th></tr>
+    <% for (const r of resultados) { %>
+    <tr><td class="mono"><%= r.arquivo %></td>
+      <td><span class="tag <%= r.status %>"><%= rot[r.status] %></span></td>
+      <td><%= r.msg %> <% if (r.nota_id) { %><a href="<%= u('/notas/' + r.nota_id) %>">abrir →</a><% } %></td></tr>
+    <% } %>
+  </table></div>
+</div>
+<% } %>
+<div class="card">
+  <form method="post" enctype="multipart/form-data" id="f" action="<%= u('/importar') %>">
+    <label class="drop" id="drop" style="display:block">
+      <p style="font-size:16px;margin:0 0 6px"><b>Arraste os arquivos aqui</b> ou clique para escolher</p>
+      <p class="muted" style="margin:0">XML da NF-e (preferido), PDF do DANFE ou arquivos ZIP. Vários de uma vez.</p>
+      <input type="file" name="arquivos" id="arq" multiple accept=".xml,.pdf,.zip" style="display:none">
+      <p id="sel" class="small" style="margin-top:10px"></p>
+    </label>
+    <p><button id="env" disabled>Importar</button></p>
+  </form>
+</div>
+<div class="card">
+  <h2>Importar de uma pasta</h2>
+  <p>Envie os arquivos (inclusive subpastas, por FTP ou gerenciador de arquivos) para <code class="mono"><%= pasta %></code> e clique abaixo. Os arquivos importados são movidos para <code class="mono">processados/</code>.</p>
+  <form method="post" action="<%= u('/importar/pasta') %>"><button class="sec">Importar da pasta</button></form>
+</div>
+<div class="card small muted">
+  <b>Como funciona:</b> o XML traz todos os dados da nota e é a fonte oficial. Se você enviar o PDF de uma nota já importada, ele é anexado automaticamente (pela chave de acesso).
+  Se enviar só o PDF, a nota é criada com os dados que puderem ser lidos do DANFE (marcada como “só PDF”) e é completada quando o XML for importado. Arquivos repetidos são ignorados.
+</div>
+<script>
+const drop = document.getElementById('drop'), arq = document.getElementById('arq'),
+      sel = document.getElementById('sel'), env = document.getElementById('env');
+function mostrar() { const n = arq.files.length; sel.textContent = n ? n + ' arquivo(s) selecionado(s)' : ''; env.disabled = !n; }
+arq.addEventListener('change', mostrar);
+['dragenter','dragover'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(e => drop.addEventListener(e, ev => { ev.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', ev => { arq.files = ev.dataTransfer.files; mostrar(); });
+document.getElementById('f').addEventListener('submit', () => { env.disabled = true; env.textContent = 'Importando…'; });
+</script>
+<%- include('partials/rodape') %>
