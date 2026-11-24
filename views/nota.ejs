@@ -68,7 +68,7 @@ const mapa = (m, v) => m[v] || v || '—';
 <div class="card">
   <h2>Itens (<%= itens.length %>)</h2>
   <div class="tw"><table class="small">
-    <thead><tr><th>#</th><th>Código</th><th>Descrição</th><th>NCM</th><th>CFOP</th><th>Un</th>
+    <thead><tr><th>#</th><th>Código</th><th>Descrição</th><th>NCM</th><th>CFOP</th><th>Origem</th><th>Un</th>
       <th class="n">Qtd</th><th class="n">Vl. unit.</th><th class="n">Desc.</th><th class="n">Vl. total</th>
       <th>CST</th><th class="n">BC ICMS</th><th class="n">% ICMS</th><th class="n">ICMS</th><th class="n">ICMS ST</th>
       <th class="n">% IPI</th><th class="n">IPI</th><th class="n">PIS</th><th class="n">COFINS</th></tr></thead>
@@ -82,17 +82,17 @@ const mapa = (m, v) => m[v] || v || '—';
         <% if (i.xped) { %><div class="muted">Pedido <%= i.xped %><%= i.nitemped ? '/' + i.nitemped : '' %></div><% } %>
         <% if (i.inf_ad_prod) { %><div class="muted"><%= i.inf_ad_prod %></div><% } %></td>
       <td class="mono"><%= i.ncm || '' %><% if (i.cest) { %><div class="muted">CEST <%= i.cest %></div><% } %></td>
-      <td class="mono"><%= i.cfop || '' %></td><td><%= i.ucom || '' %></td>
+      <td class="mono"><%= i.cfop || '' %></td><td class="small" title="<%= origemLonga(i.icms_orig) %>"><%= origem(i.icms_orig) || '—' %></td><td><%= i.ucom || '' %></td>
       <td class="n"><%= qtd(i.qcom) %></td><td class="n"><%= brl(i.vuncom, 4) %></td>
       <td class="n"><%= i.vdesc ? brl(i.vdesc) : '' %></td><td class="n"><b><%= brl(i.vprod) %></b></td>
-      <td class="mono"><%= (i.icms_orig || '') + (i.icms_cst || '') %></td>
+      <td class="mono"><%= i.icms_cst || '' %></td>
       <td class="n"><%= opc(i.icms_vbc) %></td><td class="n"><%= opc(i.icms_picms) %></td><td class="n"><%= opc(i.icms_vicms) %></td>
       <td class="n"><%= i.icms_vicmsst ? brl(i.icms_vicmsst) : '' %></td>
       <td class="n"><%= opc(i.ipi_pipi) %></td><td class="n"><%= opc(i.ipi_vipi) %></td>
       <td class="n"><%= opc(i.pis_vpis) %></td><td class="n"><%= opc(i.cofins_vcofins) %></td>
     </tr>
     <% } %>
-    <% if (!itens.length) { %><tr><td colspan="19" class="muted">Nenhum item reconhecido.</td></tr><% } %>
+    <% if (!itens.length) { %><tr><td colspan="20" class="muted">Nenhum item reconhecido.</td></tr><% } %>
     </tbody>
   </table></div>
 </div>

@@ -6,7 +6,7 @@ import multer from 'multer';
 import * as auth from './lib/auth.js';
 import * as db from './lib/db.js';
 import * as fmt from './lib/fmt.js';
-import { MOD_FRETE, xmlParaArvore } from './lib/nfe.js';
+import { MOD_FRETE, ORIGEM, ORIGEM_CURTA, xmlParaArvore } from './lib/nfe.js';
 import fs from 'node:fs';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -23,7 +23,11 @@ app.disable('x-powered-by');
 app.locals.base = BASE || '/';
 const u = (p = '/') => (BASE + p) || '/';
 Object.assign(app.locals, fmt, {
-  MOD_FRETE, u,
+  MOD_FRETE, ORIGEM, ORIGEM_CURTA, u,
+  // "0 - Nacional"; vazio quando a origem não é conhecida
+  origem: (o) => (o == null || o === '' ? '' : `${o} - ${ORIGEM_CURTA[o] || 'Código desconhecido'}`),
+  origens: (lista) => (lista || '').split(',').filter(Boolean).map((o) => `${o} - ${ORIGEM_CURTA[o] || '?'}`).join(' / '),
+  origemLonga: (o) => (o == null || o === '' ? '' : `${o} - ${ORIGEM[o] || 'Código desconhecido'}`),
   purl: (cnpj, cprod) => u(`/produto?${new URLSearchParams({ cnpj: cnpj || '', cprod: cprod || '' })}`),
 });
 
@@ -185,6 +189,11 @@ function filtros(q, porItem = false) {
     const v = Number(s);
     if (Number.isFinite(v)) { w.push(`${porItem ? 'i.vprod' : 'n.v_nf'} ${op} ?`); p.push(v); }
   }
+  if (/^[0-8]$/.test(q.orig || '')) {
+    if (porItem) w.push('i.icms_orig = ?');
+    else w.push('EXISTS (SELECT 1 FROM itens i3 WHERE i3.nota_id=n.id AND i3.icms_orig = ?)');
+    p.push(q.orig);
+  }
   if (porItem) {
     if (q.ncm) { w.push('i.ncm LIKE ?'); p.push(`${q.ncm.replace(/\D/g, '')}%`); }
     if (q.cfop) { w.push('i.cfop = ?'); p.push(q.cfop.trim()); }
@@ -226,6 +235,8 @@ rotas.get('/', (req, res) => {
     pendentes: db.valor("SELECT COUNT(*) FROM notas WHERE origem='pdf'"),
     top: db.all('SELECT e.cnpj, COALESCE(e.nome, n.emit_cnpj) nome, COUNT(*) qtd, SUM(n.v_nf) total FROM notas n '
       + 'LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj GROUP BY n.emit_cnpj ORDER BY total DESC LIMIT 8'),
+    porOrigem: db.all(`SELECT i.icms_orig orig, COUNT(*) itens, SUM(i.vprod) total FROM itens i
+      GROUP BY i.icms_orig ORDER BY total DESC`),
     recentes: db.all('SELECT n.*, e.nome emit_nome FROM notas n LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj ORDER BY n.id DESC LIMIT 8'),
   });
 });
@@ -315,7 +326,7 @@ rotas.get('/fornecedores/:cnpj', (req, res, next) => {
     e,
     r: db.get('SELECT COUNT(*) qtd, SUM(v_nf) total, MIN(data_emissao) primeira, MAX(data_emissao) ultima FROM notas WHERE emit_cnpj=?', [cnpj]),
     notas: db.all('SELECT n.*, (SELECT COUNT(*) FROM itens i WHERE i.nota_id=n.id) n_itens FROM notas n WHERE emit_cnpj=? ORDER BY data_emissao DESC', [cnpj]),
-    produtos: db.all(`SELECT i.cprod, MAX(i.xprod) xprod, MAX(i.ucom) ucom, COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total,
+    produtos: db.all(`SELECT i.cprod, MAX(i.xprod) xprod, MAX(i.ucom) ucom, GROUP_CONCAT(DISTINCT i.icms_orig) origens, COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total,
       MIN(i.vuncom) pmin, MAX(i.vuncom) pmax, MAX(n.data_emissao) ultima FROM itens i JOIN notas n ON n.id=i.nota_id
       WHERE n.emit_cnpj=? GROUP BY i.cprod ORDER BY total DESC`, [cnpj]),
   });
@@ -326,7 +337,8 @@ rotas.get('/produtos', (req, res) => {
   const { where, params } = filtros(q, true);
   const ordem = { total: 'total DESC', qtd: 'qtd DESC', nome: 'xprod', vezes: 'vezes DESC', ultima: 'ultima DESC' }[q.ordem] || 'total DESC';
   const agg = `SELECT n.emit_cnpj, e.nome emit_nome, i.cprod, MAX(i.xprod) xprod, MAX(i.cean) cean, MAX(i.ncm) ncm,
-    MAX(i.ucom) ucom, COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total, MIN(i.vuncom) pmin, MAX(i.vuncom) pmax,
+    MAX(i.ucom) ucom, GROUP_CONCAT(DISTINCT i.icms_orig) origens,
+    COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total, MIN(i.vuncom) pmin, MAX(i.vuncom) pmax,
     MAX(n.data_emissao) ultima,
     (SELECT i3.vuncom FROM itens i3 JOIN notas n3 ON n3.id=i3.nota_id WHERE n3.emit_cnpj IS n.emit_cnpj AND i3.cprod IS i.cprod
       ORDER BY n3.data_emissao DESC, n3.id DESC LIMIT 1) ultimo_preco
@@ -334,10 +346,10 @@ rotas.get('/produtos', (req, res) => {
     GROUP BY n.emit_cnpj, i.cprod`;
   if (q.formato === 'csv') {
     return csv(res, 'produtos.csv',
-      ['Fornecedor', 'CNPJ', 'Código', 'Descrição', 'EAN', 'NCM', 'Unidade', 'Compras', 'Quantidade', 'Valor Total',
+      ['Fornecedor', 'CNPJ', 'Código', 'Descrição', 'EAN', 'NCM', 'Origem', 'Unidade', 'Compras', 'Quantidade', 'Valor Total',
         'Menor Preço', 'Maior Preço', 'Último Preço', 'Última Compra'],
       db.all(`${agg} ORDER BY ${ordem}`, params).map((r) => [r.emit_nome, r.emit_cnpj, r.cprod, r.xprod, r.cean, r.ncm,
-        r.ucom, r.vezes, r.qtd, r.total, r.pmin, r.pmax, r.ultimo_preco, r.ultima]));
+        (r.origens || '').split(',').filter(Boolean).map(app.locals.origem).join(' / '), r.ucom, r.vezes, r.qtd, r.total, r.pmin, r.pmax, r.ultimo_preco, r.ultima]));
   }
   const pg = paginar(q, `SELECT COUNT(*) FROM (${agg})`, params);
   res.render('produtos', { ...pg, rows: db.all(`${agg} ORDER BY ${ordem}${pg.lim}`, params), fornecedores: fornecedoresLista() });
@@ -374,10 +386,10 @@ rotas.get('/itens', (req, res) => {
   if (q.formato === 'csv') {
     return csv(res, 'itens.csv',
       ['Emissão', 'NF', 'Série', 'Chave', 'Fornecedor', 'CNPJ', 'Item', 'Código', 'EAN', 'Descrição', 'NCM', 'CEST', 'CFOP',
-        'Unidade', 'Quantidade', 'Valor Unitário', 'Valor Total', 'Desconto', 'Frete', 'CST ICMS', 'BC ICMS', 'Alíq. ICMS',
+        'Unidade', 'Quantidade', 'Valor Unitário', 'Valor Total', 'Desconto', 'Frete', 'Origem', 'Descrição da Origem', 'CST ICMS', 'BC ICMS', 'Alíq. ICMS',
         'ICMS', 'ICMS ST', 'Alíq. IPI', 'IPI', 'PIS', 'COFINS', 'Pedido'],
       db.all(sel, params).map((r) => [r.data_emissao, r.numero, r.serie, r.chave, r.emit_nome, r.emit_cnpj, r.n_item, r.cprod,
-        r.cean, r.xprod, r.ncm, r.cest, r.cfop, r.ucom, r.qcom, r.vuncom, r.vprod, r.vdesc, r.vfrete, r.icms_cst, r.icms_vbc,
+        r.cean, r.xprod, r.ncm, r.cest, r.cfop, r.ucom, r.qcom, r.vuncom, r.vprod, r.vdesc, r.vfrete, r.icms_orig, ORIGEM[r.icms_orig] || '', r.icms_cst, r.icms_vbc,
         r.icms_picms, r.icms_vicms, r.icms_vicmsst, r.ipi_pipi, r.ipi_vipi, r.pis_vpis, r.cofins_vcofins, r.xped]));
   }
   const pg = paginar(q, `SELECT COUNT(*)${base}`, params);

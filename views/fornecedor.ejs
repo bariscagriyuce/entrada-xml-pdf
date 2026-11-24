@@ -18,9 +18,9 @@
     <a class="btn sec" href="<%= u('/itens?emit=' + e.cnpj) %>">Filtrar itens</a></p>
 </div>
 <div class="card"><h2>Produtos comprados (<%= produtos.length %>)</h2><div class="tw"><table>
-  <tr><th>Código</th><th>Descrição</th><th>Un</th><th class="n">Compras</th><th class="n">Qtd total</th><th class="n">Valor total</th><th class="n">Menor preço</th><th class="n">Maior preço</th><th>Última</th></tr>
+  <tr><th>Código</th><th>Descrição</th><th>Origem</th><th>Un</th><th class="n">Compras</th><th class="n">Qtd total</th><th class="n">Valor total</th><th class="n">Menor preço</th><th class="n">Maior preço</th><th>Última</th></tr>
   <% for (const p of produtos) { %>
-  <tr><td class="mono"><%= p.cprod %></td><td><a href="<%= purl(e.cnpj, p.cprod) %>"><%= p.xprod %></a></td><td><%= p.ucom %></td>
+  <tr><td class="mono"><%= p.cprod %></td><td><a href="<%= purl(e.cnpj, p.cprod) %>"><%= p.xprod %></a></td><td class="small"><%= origens(p.origens) || '—' %></td><td><%= p.ucom %></td>
     <td class="n"><%= p.vezes %></td><td class="n"><%= qtd(p.qtd) %></td><td class="n"><%= moeda(p.total) %></td>
     <td class="n"><%= brl(p.pmin, 4) %></td><td class="n"><%= brl(p.pmax, 4) %></td><td><%= data(p.ultima) %></td></tr>
   <% } %>

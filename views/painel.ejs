@@ -38,6 +38,18 @@
     </table>
   </div>
 </div>
+<% if (porOrigem.length) { const totOrig = porOrigem.reduce((s, o) => s + (o.total || 0), 0) || 1; %>
+<div class="card">
+  <h2>Compras por origem da mercadoria</h2>
+  <table>
+    <tr><th>Origem</th><th class="n">Itens</th><th class="n">Valor</th><th class="n">%</th></tr>
+    <% for (const o of porOrigem) { %>
+    <tr><td title="<%= origemLonga(o.orig) %>"><% if (o.orig != null) { %><a href="<%= u('/itens?orig=' + o.orig) %>"><%= origemLonga(o.orig) %></a><% } else { %><span class="muted">Não informada</span><% } %></td>
+      <td class="n"><%= o.itens %></td><td class="n"><%= moeda(o.total) %></td><td class="n"><%= brl((o.total || 0) / totOrig * 100, 1) %>%</td></tr>
+    <% } %>
+  </table>
+</div>
+<% } %>
 <div class="card">
   <h2>Importadas recentemente</h2>
   <table>

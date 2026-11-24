@@ -16,10 +16,14 @@
   <label>NCM<input name="ncm" value="<%= q.ncm || '' %>" size="9"></label>
   <label>CFOP<input name="cfop" value="<%= q.cfop || '' %>" size="5"></label>
   <% } %>
+  <label>Origem da mercadoria
+    <select name="orig"><option value="">Todas</option>
+      <% for (const [k, v] of Object.entries(ORIGEM)) { %><option value="<%= k %>" <%= q.orig === k ? 'selected' : '' %> title="<%= v %>"><%= k %> - <%= ORIGEM_CURTA[k] %></option><% } %>
+    </select></label>
   <label>Valor mín.<input name="vmin" value="<%= q.vmin || '' %>" size="8"></label>
   <label>Valor máx.<input name="vmax" value="<%= q.vmax || '' %>" size="8"></label>
   <% if (q.ordem) { %><input type="hidden" name="ordem" value="<%= q.ordem %>"><% } %>
   <button>Filtrar</button>
-  <a class="btn sec" href="<%= urlCom({ q: null, emit: null, dest: null, de: null, ate: null, ncm: null, cfop: null, vmin: null, vmax: null, ordem: null, pag: null, origem: null }) %>">Limpar</a>
+  <a class="btn sec" href="<%= urlCom({ q: null, emit: null, dest: null, de: null, ate: null, ncm: null, cfop: null, vmin: null, vmax: null, orig: null, ordem: null, pag: null, origem: null }) %>">Limpar</a>
   <a class="btn sec right" href="<%= urlCom({ formato: 'csv', pag: null }) %>">Exportar CSV</a>
 </form>
