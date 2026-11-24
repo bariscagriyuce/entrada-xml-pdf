@@ -11,6 +11,7 @@
   <div class="card kpi"><div class="l">Notas</div><div class="v"><%= r.qtd %></div></div>
   <div class="card kpi"><div class="l">Valor total</div><div class="v"><%= moeda(r.total) %></div></div>
   <div class="card kpi"><div class="l">Fornecedores</div><div class="v"><%= r.forn %></div></div>
+  <div class="card kpi"><div class="l">Destinatários</div><div class="v"><%= nDest %></div></div>
   <div class="card kpi"><div class="l">Itens de produto</div><div class="v"><%= itens %></div></div>
 </div>
 <p class="muted small">Período: <%= data(r.primeira) %> a <%= data(r.ultima) %></p>
@@ -38,25 +39,26 @@
     </table>
   </div>
 </div>
-<% if (porOrigem.length) { const totOrig = porOrigem.reduce((s, o) => s + (o.total || 0), 0) || 1; %>
 <div class="card">
-  <h2>Compras por origem da mercadoria</h2>
-  <table>
-    <tr><th>Origem</th><th class="n">Itens</th><th class="n">Valor</th><th class="n">%</th></tr>
-    <% for (const o of porOrigem) { %>
-    <tr><td title="<%= origemLonga(o.orig) %>"><% if (o.orig != null) { %><a href="<%= u('/itens?orig=' + o.orig) %>"><%= origemLonga(o.orig) %></a><% } else { %><span class="muted">Não informada</span><% } %></td>
-      <td class="n"><%= o.itens %></td><td class="n"><%= moeda(o.total) %></td><td class="n"><%= brl((o.total || 0) / totOrig * 100, 1) %>%</td></tr>
+  <h2>Empresas destinatárias <span class="muted small">(quem recebeu as notas)</span></h2>
+  <div class="tw"><table>
+    <tr><th>Empresa</th><th>Cidade/UF</th><th class="n">Notas</th><th class="n">Fornecedores</th><th class="n">Valor</th><th class="n">%</th><th>Última nota</th></tr>
+    <% const totDest = destinatarios.reduce((s, d) => s + (d.total || 0), 0) || 1; %>
+    <% for (const d of destinatarios) { %>
+    <tr><td><% if (d.cnpj) { %><a href="<%= u('/destinatarios/' + d.cnpj) %>"><b><%= d.nome %></b></a><div class="muted small mono"><%= doc(d.cnpj) %></div><% } else { %><span class="muted">Não informado</span><% } %></td>
+      <td class="small"><%= d.municipio || '' %><%= d.uf ? '/' + d.uf : '' %></td>
+      <td class="n"><%= d.qtd %></td><td class="n"><%= d.forn %></td><td class="n"><b><%= moeda(d.total) %></b></td>
+      <td class="n"><%= brl((d.total || 0) / totDest * 100, 1) %>%</td><td><%= data(d.ultima) %></td></tr>
     <% } %>
-  </table>
+  </table></div>
 </div>
-<% } %>
 <div class="card">
   <h2>Importadas recentemente</h2>
   <table>
-    <tr><th>Nota</th><th>Emissão</th><th>Fornecedor</th><th class="n">Valor</th><th></th></tr>
+    <tr><th>Nota</th><th>Emissão</th><th>Fornecedor</th><th>Destinatário</th><th class="n">Valor</th><th></th></tr>
     <% for (const n of recentes) { %>
     <tr><td><a href="<%= u('/notas/' + n.id) %>"><%= n.numero || '—' %><%= n.serie ? '/' + n.serie : '' %></a></td>
-        <td><%= data(n.data_emissao) %></td><td><%= n.emit_nome || doc(n.emit_cnpj) %></td>
+        <td><%= data(n.data_emissao) %></td><td><%= n.emit_nome || doc(n.emit_cnpj) %></td><td class="small"><%= n.dest_nome || doc(n.dest_cnpj) %></td>
         <td class="n"><%= moeda(n.v_nf) %></td>
         <td><% if (n.origem === 'pdf') { %><span class="tag pdf">só PDF</span><% } %></td></tr>
     <% } %>

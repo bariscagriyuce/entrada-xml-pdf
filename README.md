@@ -22,6 +22,11 @@ ou **DANFE em PDF**, armazenar todos os dados e pesquisar por **fornecedor**, **
   servidor tiver o `tesseract` instalado (em geral não existe em hospedagem compartilhada).
 - **Notas / Itens / Produtos / Fornecedores**: busca sem distinção de acentos; filtros por fornecedor,
   minha empresa (destinatário), período, valor, NCM e CFOP; ordenação; **exportação CSV** (abre no Excel).
+- **Destinatários**: empresas que receberam as notas (várias empresas no mesmo sistema), com fornecedores,
+  produtos e notas de cada uma.
+- **PDF e downloads**: cada nota tem o PDF (DANFE original, se importado, ou gerado a partir do XML).
+  Na lista de notas é possível selecionar quantas quiser (inclusive todas as do filtro) e baixar os XML em
+  .zip, os PDF em .zip ou um PDF único para imprimir.
 - **Produto**: histórico completo de compras, gráfico de preço unitário e outros fornecedores com o mesmo EAN.
 - **Usuários**: o primeiro acesso cria o administrador; depois é possível adicionar usuários e trocar a senha.
 

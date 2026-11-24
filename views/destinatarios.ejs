@@ -1,0 +1,20 @@
+<%- include('partials/topo', { titulo: 'Destinatários' }) %>
+<h1>Destinatários</h1>
+<p class="sub">Empresas que receberam as notas (suas empresas).</p>
+<form class="filtros card" method="get">
+  <label>Busca<input type="search" name="q" value="<%= q.q || '' %>" placeholder="Nome, CNPJ ou cidade" autofocus></label>
+  <button>Buscar</button><a class="btn sec" href="<%= u('/destinatarios') %>">Limpar</a>
+</form>
+<div class="card tw"><table>
+  <thead><tr><%- ord('nome', 'Empresa') %><th>CNPJ</th><th>IE</th><th>Cidade/UF</th><%- ord('qtd', 'Notas', 'n') %><th class="n">Fornecedores</th><%- ord('total', 'Valor recebido', 'n') %><th>Primeira</th><%- ord('ultima', 'Última') %></tr></thead>
+  <tbody>
+  <% for (const e of rows) { %>
+  <tr><td><a href="<%= u('/destinatarios/' + e.cnpj) %>"><b><%= e.nome || e.cnpj %></b></a><% if (e.fantasia) { %><div class="muted small"><%= e.fantasia %></div><% } %></td>
+      <td class="mono"><%= doc(e.cnpj) %></td><td class="mono small"><%= e.ie || '' %></td><td><%= e.municipio || '' %><%= e.uf ? '/' + e.uf : '' %></td>
+      <td class="n"><%= e.qtd %></td><td class="n"><%= e.forn %></td><td class="n"><b><%= moeda(e.total) %></b></td>
+      <td><%= data(e.primeira) %></td><td><%= data(e.ultima) %></td></tr>
+  <% } %>
+  <% if (!rows.length) { %><tr><td colspan="9" class="muted">Nenhuma empresa encontrada.</td></tr><% } %>
+  </tbody>
+</table><p class="muted small"><%= rows.length %> empresa(s)</p></div>
+<%- include('partials/rodape') %>

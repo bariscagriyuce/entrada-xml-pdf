@@ -92,3 +92,6 @@ svg.chart line { stroke: var(--line); }
 .usuario form { margin: 0; }
 .usuario button { padding: 4px 10px; font-weight: 500; }
 form.inline { display: inline; }
+
+.selecao { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; position: sticky; top: 52px; z-index: 4; }
+.selecao button:disabled { opacity: .45; cursor: default; }

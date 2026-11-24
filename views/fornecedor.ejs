@@ -15,7 +15,8 @@
     <dt>E-mail</dt><dd><%= e.email || '—' %></dd>
   </dl>
   <p class="acoes"><a class="btn sec" href="<%= u('/notas?emit=' + e.cnpj) %>">Filtrar notas</a>
-    <a class="btn sec" href="<%= u('/itens?emit=' + e.cnpj) %>">Filtrar itens</a></p>
+    <a class="btn sec" href="<%= u('/itens?emit=' + e.cnpj) %>">Filtrar itens</a>
+    <a class="btn sec" href="<%= u('/notas?emit=' + e.cnpj) %>">Selecionar e baixar notas (XML/PDF)</a></p>
 </div>
 <div class="card"><h2>Produtos comprados (<%= produtos.length %>)</h2><div class="tw"><table>
   <tr><th>Código</th><th>Descrição</th><th>Origem</th><th>Un</th><th class="n">Compras</th><th class="n">Qtd total</th><th class="n">Valor total</th><th class="n">Menor preço</th><th class="n">Maior preço</th><th>Última</th></tr>

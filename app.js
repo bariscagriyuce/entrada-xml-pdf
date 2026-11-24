@@ -8,6 +8,8 @@ import * as db from './lib/db.js';
 import * as fmt from './lib/fmt.js';
 import { MOD_FRETE, ORIGEM, ORIGEM_CURTA, xmlParaArvore } from './lib/nfe.js';
 import fs from 'node:fs';
+import AdmZip from 'adm-zip';
+import { gerarDanfe, juntarPdfs } from './lib/gerar-pdf.js';
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const BASE = (process.env.BASE_PATH || '').replace(/\/+$/, ''); // ex.: "/notas" se a aplicação ficar em subpasta
@@ -235,9 +237,12 @@ rotas.get('/', (req, res) => {
     pendentes: db.valor("SELECT COUNT(*) FROM notas WHERE origem='pdf'"),
     top: db.all('SELECT e.cnpj, COALESCE(e.nome, n.emit_cnpj) nome, COUNT(*) qtd, SUM(n.v_nf) total FROM notas n '
       + 'LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj GROUP BY n.emit_cnpj ORDER BY total DESC LIMIT 8'),
-    porOrigem: db.all(`SELECT i.icms_orig orig, COUNT(*) itens, SUM(i.vprod) total FROM itens i
-      GROUP BY i.icms_orig ORDER BY total DESC`),
-    recentes: db.all('SELECT n.*, e.nome emit_nome FROM notas n LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj ORDER BY n.id DESC LIMIT 8'),
+    nDest: db.valor('SELECT COUNT(DISTINCT dest_cnpj) FROM notas WHERE dest_cnpj IS NOT NULL'),
+    destinatarios: db.all(`SELECT n.dest_cnpj cnpj, COALESCE(e.fantasia, e.nome, n.dest_cnpj) nome, e.municipio, e.uf,
+      COUNT(*) qtd, SUM(n.v_nf) total, COUNT(DISTINCT n.emit_cnpj) forn, MAX(n.data_emissao) ultima
+      FROM notas n LEFT JOIN empresas e ON e.cnpj=n.dest_cnpj GROUP BY n.dest_cnpj ORDER BY total DESC`),
+    recentes: db.all('SELECT n.*, e.nome emit_nome, COALESCE(d.fantasia, d.nome) dest_nome FROM notas n LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj '
+      + 'LEFT JOIN empresas d ON d.cnpj=n.dest_cnpj ORDER BY n.id DESC LIMIT 8'),
   });
 });
 
@@ -296,6 +301,87 @@ rotas.get('/notas/:id(\\d+)/arquivo/:tipo(xml|pdf)', (req, res, next) => {
   res.type(req.params.tipo === 'pdf' ? 'application/pdf' : 'application/xml').sendFile(arq);
 });
 
+// ------------------------------------------------------------------ PDF e downloads em lote
+function carregarNota(id) {
+  const n = db.get('SELECT * FROM notas WHERE id=?', [id]);
+  if (!n) return null;
+  return {
+    n,
+    emit: db.get('SELECT * FROM empresas WHERE cnpj=?', [n.emit_cnpj]),
+    dest: db.get('SELECT * FROM empresas WHERE cnpj=?', [n.dest_cnpj]),
+    itens: db.all('SELECT * FROM itens WHERE nota_id=? ORDER BY n_item', [id]),
+    dups: db.all('SELECT * FROM duplicatas WHERE nota_id=? ORDER BY vencimento', [id]),
+    pags: db.all('SELECT * FROM pagamentos WHERE nota_id=?', [id]),
+  };
+}
+
+const nomeBase = (n) => `NFe_${n.numero || 'sn'}_${n.serie || ''}_${(n.chave || String(n.id)).slice(-44)}`.replace(/[^\w.-]/g, '');
+
+// PDF da nota: o DANFE original (se foi importado) ou um gerado a partir dos dados do XML.
+async function pdfDaNota(id, gerado = false) {
+  const dados = carregarNota(id);
+  if (!dados) return null;
+  if (dados.n.arquivo_pdf && !gerado) {
+    try { return { n: dados.n, bytes: fs.readFileSync(path.join(db.ARQUIVOS, path.basename(dados.n.arquivo_pdf))) }; } catch { /* gera */ }
+  }
+  return { n: dados.n, bytes: Buffer.from(await gerarDanfe(dados)) };
+}
+
+rotas.get('/notas/:id(\\d+)/pdf', assinc(async (req, res, next) => {
+  const r = await pdfDaNota(Number(req.params.id), req.query.gerado === '1');
+  if (!r) return next();
+  res.type('application/pdf');
+  res.setHeader('Content-Disposition', `${req.query.baixar === '1' ? 'attachment' : 'inline'}; filename="${nomeBase(r.n)}.pdf"`);
+  res.send(r.bytes);
+}));
+
+// IDs de todas as notas do filtro atual (para "selecionar todas").
+rotas.get('/notas/ids', (req, res) => {
+  const { where, params } = filtros(res.locals.q);
+  res.json(db.all(`SELECT n.id FROM notas n LEFT JOIN empresas e ON e.cnpj=n.emit_cnpj${where}`, params).map((r) => r.id));
+});
+
+const LIMITE_LOTE = 2000;
+rotas.post('/notas/lote', assinc(async (req, res) => {
+  const ids = [...new Set(String(req.body.ids || '').split(',').map(Number).filter((x) => Number.isInteger(x) && x > 0))].slice(0, LIMITE_LOTE);
+  const formato = String(req.body.formato || '');
+  if (!ids.length) return res.redirect(app.locals.u('/notas'));
+  const notas = db.all(`SELECT id, numero, serie, chave, data_emissao, arquivo_xml FROM notas WHERE id IN (${ids.map(() => '?').join(',')})
+    ORDER BY data_emissao, id`, ids);
+  const carimbo = new Date().toISOString().slice(0, 16).replace(/\D/g, '');
+  if (formato === 'xml') {
+    const zip = new AdmZip();
+    const sem = [];
+    for (const n of notas) {
+      if (!n.arquivo_xml) { sem.push(`${n.numero || n.id} (${n.chave || 'sem chave'})`); continue; }
+      try { zip.addFile(`${nomeBase(n)}.xml`, fs.readFileSync(path.join(db.ARQUIVOS, path.basename(n.arquivo_xml)))); } catch { sem.push(String(n.numero || n.id)); }
+    }
+    if (sem.length) zip.addFile('LEIA-ME.txt', Buffer.from(`Notas sem arquivo XML (importadas somente pelo PDF):\r\n${sem.join('\r\n')}\r\n`, 'utf8'));
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="notas_xml_${carimbo}.zip"`);
+    return res.send(zip.toBuffer());
+  }
+  if (formato === 'pdfzip') {
+    const zip = new AdmZip();
+    for (const n of notas) {
+      const r = await pdfDaNota(n.id);
+      if (r) zip.addFile(`${nomeBase(n)}.pdf`, r.bytes);
+    }
+    res.setHeader('Content-Type', 'application/zip');
+    res.setHeader('Content-Disposition', `attachment; filename="notas_pdf_${carimbo}.zip"`);
+    return res.send(zip.toBuffer());
+  }
+  // PDF único com todas as notas, para imprimir
+  const partes = [];
+  for (const n of notas) {
+    const r = await pdfDaNota(n.id);
+    if (r) partes.push(r.bytes);
+  }
+  res.type('application/pdf');
+  res.setHeader('Content-Disposition', `inline; filename="notas_${carimbo}.pdf"`);
+  res.send(Buffer.from(await juntarPdfs(partes)));
+}));
+
 rotas.post('/notas/:id(\\d+)/excluir', (req, res) => {
   db.excluirNota(Number(req.params.id));
   res.redirect(app.locals.u('/notas?ok=Nota excluída.'));
@@ -329,6 +415,44 @@ rotas.get('/fornecedores/:cnpj', (req, res, next) => {
     produtos: db.all(`SELECT i.cprod, MAX(i.xprod) xprod, MAX(i.ucom) ucom, GROUP_CONCAT(DISTINCT i.icms_orig) origens, COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total,
       MIN(i.vuncom) pmin, MAX(i.vuncom) pmax, MAX(n.data_emissao) ultima FROM itens i JOIN notas n ON n.id=i.nota_id
       WHERE n.emit_cnpj=? GROUP BY i.cprod ORDER BY total DESC`, [cnpj]),
+  });
+});
+
+rotas.get('/destinatarios', (req, res) => {
+  const q = res.locals.q;
+  const busca = (q.q || '').trim();
+  let w = '';
+  let p = [];
+  if (busca) {
+    const nq = `%${db.norm(busca)}%`;
+    w = ' WHERE norm(e.nome) LIKE ? OR norm(e.fantasia) LIKE ? OR e.cnpj LIKE ? OR norm(e.municipio) LIKE ?';
+    p = [nq, nq, `%${busca.replace(/\D/g, '') || busca}%`, nq];
+  }
+  const ordem = { nome: 'e.nome', total: 'total DESC', qtd: 'qtd DESC', ultima: 'ultima DESC' }[q.ordem] || 'total DESC';
+  res.render('destinatarios', {
+    rows: db.all(`SELECT e.*, COUNT(n.id) qtd, SUM(n.v_nf) total, COUNT(DISTINCT n.emit_cnpj) forn,
+      MIN(n.data_emissao) primeira, MAX(n.data_emissao) ultima
+      FROM empresas e JOIN notas n ON n.dest_cnpj=e.cnpj${w} GROUP BY e.cnpj ORDER BY ${ordem}`, p),
+  });
+});
+
+rotas.get('/destinatarios/:cnpj', (req, res, next) => {
+  const cnpj = req.params.cnpj;
+  const e = db.get('SELECT * FROM empresas WHERE cnpj=?', [cnpj]);
+  if (!e) return next();
+  res.render('destinatario', {
+    e,
+    r: db.get(`SELECT COUNT(*) qtd, SUM(v_nf) total, COUNT(DISTINCT emit_cnpj) forn, MIN(data_emissao) primeira,
+      MAX(data_emissao) ultima FROM notas WHERE dest_cnpj=?`, [cnpj]),
+    fornecedores: db.all(`SELECT n.emit_cnpj cnpj, COALESCE(f.nome, n.emit_cnpj) nome, COUNT(*) qtd, SUM(n.v_nf) total,
+      MAX(n.data_emissao) ultima FROM notas n LEFT JOIN empresas f ON f.cnpj=n.emit_cnpj
+      WHERE n.dest_cnpj=? GROUP BY n.emit_cnpj ORDER BY total DESC`, [cnpj]),
+    produtos: db.all(`SELECT n.emit_cnpj, f.nome emit_nome, i.cprod, MAX(i.xprod) xprod, MAX(i.ucom) ucom,
+      GROUP_CONCAT(DISTINCT i.icms_orig) origens, COUNT(*) vezes, SUM(i.qcom) qtd, SUM(i.vprod) total,
+      MAX(n.data_emissao) ultima FROM itens i JOIN notas n ON n.id=i.nota_id LEFT JOIN empresas f ON f.cnpj=n.emit_cnpj
+      WHERE n.dest_cnpj=? GROUP BY n.emit_cnpj, i.cprod ORDER BY total DESC LIMIT 200`, [cnpj]),
+    notas: db.all(`SELECT n.*, f.nome emit_nome, (SELECT COUNT(*) FROM itens i WHERE i.nota_id=n.id) n_itens
+      FROM notas n LEFT JOIN empresas f ON f.cnpj=n.emit_cnpj WHERE n.dest_cnpj=? ORDER BY n.data_emissao DESC LIMIT 200`, [cnpj]),
   });
 });
 

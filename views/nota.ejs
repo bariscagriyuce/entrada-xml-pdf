@@ -18,7 +18,9 @@ const mapa = (m, v) => m[v] || v || '—';
   <% if (n.origem === 'pdf') { %><span class="tag pdf">importada do PDF</span><% } %>
   <span class="right"></span>
   <% if (n.arquivo_xml) { %><a class="btn sec" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">Baixar XML</a><% } %>
-  <% if (n.arquivo_pdf) { %><a class="btn sec" target="_blank" href="<%= u('/notas/' + n.id + '/arquivo/pdf') %>">Abrir PDF (DANFE)</a><% } %>
+  <a class="btn sec" target="_blank" href="<%= u('/notas/' + n.id + '/pdf') %>">PDF (DANFE)</a>
+  <a class="btn sec" href="<%= u('/notas/' + n.id + '/pdf?baixar=1') %>">Baixar PDF</a>
+  <% if (n.arquivo_pdf && n.arquivo_xml) { %><a class="btn sec" target="_blank" href="<%= u('/notas/' + n.id + '/pdf?gerado=1') %>" title="O PDF acima é o DANFE original enviado; este é gerado a partir do XML">PDF gerado do XML</a><% } %>
   <form method="post" action="<%= u('/notas/' + n.id + '/excluir') %>" onsubmit="return confirm('Excluir esta nota e seus arquivos?')"><button class="perigo">Excluir</button></form>
 </div>
 <p class="muted mono" style="margin-top:6px">Chave: <%= chave(n.chave) %></p>
@@ -28,7 +30,8 @@ const mapa = (m, v) => m[v] || v || '—';
 <div class="grid g2">
   <div class="card"><h2>Emitente (fornecedor)</h2><%- pessoa(emit, n.emit_cnpj) %>
     <% if (n.emit_cnpj) { %><p><a href="<%= u('/fornecedores/' + n.emit_cnpj) %>">Ver todas as notas deste fornecedor →</a></p><% } %></div>
-  <div class="card"><h2>Destinatário</h2><%- pessoa(dest, n.dest_cnpj) %></div>
+  <div class="card"><h2>Destinatário</h2><%- pessoa(dest, n.dest_cnpj) %>
+    <% if (n.dest_cnpj) { %><p><a href="<%= u('/destinatarios/' + n.dest_cnpj) %>">Ver todas as notas desta empresa →</a></p><% } %></div>
 </div>
 
 <div class="grid g2">

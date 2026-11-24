@@ -1,32 +1,87 @@
 <%- include('partials/topo', { titulo: 'Notas' }) %>
 <h1>Notas de entrada</h1>
 <%- include('partials/filtros', { placeholder: 'Fornecedor, nº da nota, chave, produto…', porItem: false }) %>
+<div class="card selecao" id="barra">
+  <span><b id="qtdSel">0</b> nota(s) selecionada(s)</span>
+  <button type="button" class="sec" id="selTodas">Selecionar todas as <%= total %> do filtro</button>
+  <button type="button" class="sec" id="limparSel">Limpar seleção</button>
+  <span class="right"></span>
+  <button type="button" data-formato="xml" class="acaoLote" disabled>Baixar XML (.zip)</button>
+  <button type="button" data-formato="pdfzip" class="acaoLote" disabled>Baixar PDF (.zip)</button>
+  <button type="button" data-formato="pdf" class="acaoLote" disabled>PDF único para imprimir</button>
+</div>
+<form id="formLote" method="post" action="<%= u('/notas/lote') %>" style="display:none">
+  <input type="hidden" name="ids" id="idsLote"><input type="hidden" name="formato" id="formatoLote">
+</form>
 <div class="card">
   <div class="acoes"><span>Soma das notas filtradas: <b><%= moeda(soma) %></b></span></div>
   <div class="tw"><table>
     <thead><tr>
+      <th><input type="checkbox" id="marcarPagina" title="Selecionar as notas desta página"></th>
       <%- ord('numero', 'Nº / Série') %><%- ord('data', 'Emissão') %><%- ord('fornecedor', 'Fornecedor') %>
       <th>Destinatário</th><th>Natureza da operação</th><th class="n">Itens</th><%- ord('valor', 'Valor total', 'n') %><th>Arquivos</th>
     </tr></thead>
     <tbody>
     <% for (const n of rows) { %>
     <tr>
+      <td><input type="checkbox" class="sel" value="<%= n.id %>"></td>
       <td><a href="<%= u('/notas/' + n.id) %>"><b><%= n.numero || '—' %></b><% if (n.serie) { %><span class="muted">/<%= n.serie %></span><% } %></a></td>
       <td><%= data(n.data_emissao) %></td>
       <td><% if (n.emit_cnpj) { %><a href="<%= u('/fornecedores/' + n.emit_cnpj) %>"><%= n.emit_nome || doc(n.emit_cnpj) %></a><% } %>
           <div class="muted small"><%= doc(n.emit_cnpj) %></div></td>
-      <td class="small"><%= n.dest_nome || doc(n.dest_cnpj) %></td>
+      <td class="small"><% if (n.dest_cnpj) { %><a href="<%= u('/destinatarios/' + n.dest_cnpj) %>"><%= n.dest_nome || doc(n.dest_cnpj) %></a><% } %></td>
       <td class="small"><%= n.natureza_operacao || '—' %></td>
       <td class="n"><%= n.n_itens %></td>
       <td class="n"><b><%= moeda(n.v_nf) %></b></td>
-      <td><% if (n.arquivo_xml) { %><a class="tag" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">XML</a><% } %>
-          <% if (n.arquivo_pdf) { %><a class="tag pdf" href="<%= u('/notas/' + n.id + '/arquivo/pdf') %>" target="_blank">PDF</a><% } %>
+      <td style="white-space:nowrap"><% if (n.arquivo_xml) { %><a class="tag" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">XML</a><% } %>
+          <a class="tag pdf" href="<%= u('/notas/' + n.id + '/pdf') %>" target="_blank" title="<%= n.arquivo_pdf ? 'DANFE original' : 'DANFE gerado a partir do XML' %>">PDF</a>
           <% if (n.origem === 'pdf') { %><span class="tag erro" title="Sem XML: dados aproximados">sem XML</span><% } %></td>
     </tr>
     <% } %>
-    <% if (!rows.length) { %><tr><td colspan="8" class="muted">Nenhuma nota encontrada.</td></tr><% } %>
+    <% if (!rows.length) { %><tr><td colspan="9" class="muted">Nenhuma nota encontrada.</td></tr><% } %>
     </tbody>
   </table></div>
   <%- include('partials/paginacao') %>
 </div>
+<script>
+(() => {
+  // A seleção vale entre páginas e filtros (guardada no navegador).
+  const CHAVE = 'nfe_selecao';
+  let sel;
+  try { sel = new Set(JSON.parse(localStorage.getItem(CHAVE) || '[]')); } catch { sel = new Set(); }
+  const salvar = () => { try { localStorage.setItem(CHAVE, JSON.stringify([...sel])); } catch {} };
+  const caixas = [...document.querySelectorAll('input.sel')];
+  const marcarPagina = document.getElementById('marcarPagina');
+  const atualizar = () => {
+    document.getElementById('qtdSel').textContent = sel.size;
+    document.querySelectorAll('.acaoLote').forEach((b) => { b.disabled = !sel.size; });
+    caixas.forEach((c) => { c.checked = sel.has(Number(c.value)); });
+    marcarPagina.checked = caixas.length > 0 && caixas.every((c) => c.checked);
+  };
+  caixas.forEach((c) => c.addEventListener('change', () => {
+    c.checked ? sel.add(Number(c.value)) : sel.delete(Number(c.value)); salvar(); atualizar();
+  }));
+  marcarPagina.addEventListener('change', () => {
+    caixas.forEach((c) => (marcarPagina.checked ? sel.add(Number(c.value)) : sel.delete(Number(c.value)))); salvar(); atualizar();
+  });
+  document.getElementById('limparSel').addEventListener('click', () => { sel.clear(); salvar(); atualizar(); });
+  document.getElementById('selTodas').addEventListener('click', async (ev) => {
+    ev.target.disabled = true;
+    try {
+      const r = await fetch('<%= u('/notas/ids') %>' + location.search, { credentials: 'same-origin' });
+      (await r.json()).forEach((id) => sel.add(id)); salvar(); atualizar();
+    } finally { ev.target.disabled = false; }
+  });
+  document.querySelectorAll('.acaoLote').forEach((b) => b.addEventListener('click', () => {
+    if (!sel.size) return;
+    if (sel.size > 2000) { alert('Selecione no máximo 2000 notas por vez.'); return; }
+    const f = document.getElementById('formLote');
+    document.getElementById('idsLote').value = [...sel].join(',');
+    document.getElementById('formatoLote').value = b.dataset.formato;
+    f.target = b.dataset.formato === 'pdf' ? '_blank' : '';
+    f.submit();
+  }));
+  atualizar();
+})();
+</script>
 <%- include('partials/rodape') %>

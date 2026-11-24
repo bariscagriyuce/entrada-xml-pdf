@@ -4,8 +4,8 @@
     <select name="emit"><option value="">Todos</option>
       <% for (const f of fornecedores) { %><option value="<%= f.cnpj %>" <%= q.emit === f.cnpj ? 'selected' : '' %>><%= f.nome || f.cnpj %></option><% } %>
     </select></label>
-  <% if (minhasEmpresas.length > 1) { %>
-  <label>Minha empresa (destinatário)
+  <% if (minhasEmpresas.length) { %>
+  <label>Destinatário
     <select name="dest"><option value="">Todas</option>
       <% for (const f of minhasEmpresas) { %><option value="<%= f.cnpj %>" <%= q.dest === f.cnpj ? 'selected' : '' %>><%= f.nome %></option><% } %>
     </select></label>

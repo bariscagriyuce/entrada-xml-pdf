@@ -1,0 +1,48 @@
+<%- include('partials/topo', { titulo: e.nome }) %>
+<h1><%= e.nome || doc(e.cnpj) %></h1>
+<p class="sub mono"><%= doc(e.cnpj) %><%= e.fantasia ? ' · ' + e.fantasia : '' %> · destinatário</p>
+<div class="grid g4">
+  <div class="card kpi"><div class="l">Notas recebidas</div><div class="v"><%= r.qtd %></div></div>
+  <div class="card kpi"><div class="l">Valor total</div><div class="v"><%= moeda(r.total) %></div></div>
+  <div class="card kpi"><div class="l">Fornecedores</div><div class="v"><%= r.forn %></div></div>
+  <div class="card kpi"><div class="l">Período</div><div class="v" style="font-size:16px"><%= data(r.primeira) %> – <%= data(r.ultima) %></div></div>
+</div>
+<div class="card"><h2>Cadastro</h2>
+  <dl class="kv">
+    <dt>Razão social</dt><dd><%= e.nome || '—' %></dd>
+    <dt>CNPJ/CPF</dt><dd class="mono"><%= doc(e.cnpj) %></dd>
+    <dt>IE</dt><dd class="mono"><%= e.ie || '—' %></dd>
+    <dt>Endereço</dt><dd><% if (e.logradouro) { %><%= e.logradouro %>, <%= e.numero %> <%= e.complemento || '' %> — <%= e.bairro %> · <%= e.municipio %>/<%= e.uf %> · CEP <%= e.cep %><% } else { %>—<% } %></dd>
+    <dt>Telefone</dt><dd><%= e.fone || '—' %></dd>
+    <dt>E-mail</dt><dd><%= e.email || '—' %></dd>
+  </dl>
+  <p class="acoes"><a class="btn sec" href="<%= u('/notas?dest=' + e.cnpj) %>">Selecionar e baixar notas (XML/PDF)</a>
+    <a class="btn sec" href="<%= u('/itens?dest=' + e.cnpj) %>">Filtrar itens</a>
+    <a class="btn sec" href="<%= u('/produtos?dest=' + e.cnpj) %>">Filtrar produtos</a></p>
+</div>
+<div class="card"><h2>Fornecedores desta empresa (<%= fornecedores.length %>)</h2><div class="tw"><table>
+  <tr><th>Fornecedor</th><th>CNPJ</th><th class="n">Notas</th><th class="n">Valor</th><th>Última</th></tr>
+  <% for (const f of fornecedores) { %>
+  <tr><td><% if (f.cnpj) { %><a href="<%= u('/fornecedores/' + f.cnpj) %>"><%= f.nome %></a><% } %></td><td class="mono"><%= doc(f.cnpj) %></td>
+    <td class="n"><a href="<%= u('/notas?' + new URLSearchParams({ dest: e.cnpj, emit: f.cnpj || '' })) %>"><%= f.qtd %></a></td><td class="n"><%= moeda(f.total) %></td><td><%= data(f.ultima) %></td></tr>
+  <% } %>
+</table></div></div>
+<div class="card"><h2>Produtos recebidos<%= produtos.length >= 200 ? ' (200 maiores)' : ` (${produtos.length})` %></h2><div class="tw"><table>
+  <tr><th>Fornecedor</th><th>Código</th><th>Descrição</th><th>Origem</th><th>Un</th><th class="n">Compras</th><th class="n">Qtd total</th><th class="n">Valor total</th><th>Última</th></tr>
+  <% for (const p of produtos) { %>
+  <tr><td class="small"><%= p.emit_nome || doc(p.emit_cnpj) %></td><td class="mono"><%= p.cprod %></td><td><a href="<%= purl(p.emit_cnpj, p.cprod) %>"><%= p.xprod %></a></td>
+    <td class="small"><%= origens(p.origens) || '—' %></td><td><%= p.ucom %></td><td class="n"><%= p.vezes %></td><td class="n"><%= qtd(p.qtd) %></td>
+    <td class="n"><%= moeda(p.total) %></td><td><%= data(p.ultima) %></td></tr>
+  <% } %>
+</table></div></div>
+<div class="card"><h2>Notas recebidas<%= notas.length >= 200 ? ' (200 mais recentes)' : ` (${notas.length})` %></h2><div class="tw"><table>
+  <tr><th>Nº / Série</th><th>Emissão</th><th>Fornecedor</th><th>Natureza</th><th class="n">Itens</th><th class="n">Valor</th><th>Arquivos</th></tr>
+  <% for (const n of notas) { %>
+  <tr><td><a href="<%= u('/notas/' + n.id) %>"><b><%= n.numero %></b>/<%= n.serie %></a> <% if (n.origem === 'pdf') { %><span class="tag pdf">só PDF</span><% } %></td>
+    <td><%= data(n.data_emissao) %></td><td class="small"><%= n.emit_nome || doc(n.emit_cnpj) %></td><td class="small"><%= n.natureza_operacao || '' %></td>
+    <td class="n"><%= n.n_itens %></td><td class="n"><%= moeda(n.v_nf) %></td>
+    <td style="white-space:nowrap"><% if (n.arquivo_xml) { %><a class="tag" href="<%= u('/notas/' + n.id + '/arquivo/xml?baixar=1') %>">XML</a><% } %>
+      <a class="tag pdf" target="_blank" href="<%= u('/notas/' + n.id + '/pdf') %>">PDF</a></td></tr>
+  <% } %>
+</table></div></div>
+<%- include('partials/rodape') %>
